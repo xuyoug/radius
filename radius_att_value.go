@@ -15,50 +15,6 @@ type TAG_INT uint32
 type TAG_STR string
 type HEXADECIMAL []byte
 
-//设置值
-func (v INTEGER) SetValue(i interface{}) error {
-	if vi, ok := i.(INTEGER); ok {
-		v = vi
-		return nil
-	}
-	return ERR_VALUE_TYPE
-}
-func (v STRING) SetValue(i interface{}) error {
-	if vi, ok := i.(STRING); ok {
-		v = vi
-		return nil
-	}
-	return ERR_VALUE_TYPE
-}
-func (v IPADDR) SetValue(i interface{}) error {
-	if vi, ok := i.(IPADDR); ok {
-		v = vi
-		return nil
-	}
-	return ERR_VALUE_TYPE
-}
-func (v TAG_INT) SetValue(i interface{}) error {
-	if vi, ok := i.(TAG_INT); ok {
-		v = vi
-		return nil
-	}
-	return ERR_VALUE_TYPE
-}
-func (v TAG_STR) SetValue(i interface{}) error {
-	if vi, ok := i.(TAG_STR); ok {
-		v = vi
-		return nil
-	}
-	return ERR_VALUE_TYPE
-}
-func (v HEXADECIMAL) SetValue(i interface{}) error {
-	if vi, ok := i.(HEXADECIMAL); ok {
-		v = vi
-		return nil
-	}
-	return ERR_VALUE_TYPE
-}
-
 //格式化输出
 func (v INTEGER) String() string {
 	return strconv.Itoa(int(v))
@@ -102,13 +58,12 @@ func (v HEXADECIMAL) Len() uint8 {
 type AttributeValue interface {
 	//fillValue(buf *bytes.Buffer)
 	writetobuf(buf *bytes.Buffer)
-	SetValue(interface{}) error
 	String() string
 	Len() uint8
 }
 
 func NewAttributeValue(attrType string) (AttributeValue, error) {
-	attrType = strpredone(attrType)
+	attrType = stringfix(attrType)
 	switch attrType {
 	case "INTEGER":
 		var v INTEGER
@@ -134,7 +89,7 @@ func NewAttributeValue(attrType string) (AttributeValue, error) {
 }
 
 func NewAttributeValueFromBuff(attrType string, buf *bytes.Buffer) (AttributeValue, error) {
-	attrType = strpredone(attrType)
+	attrType = stringfix(attrType)
 	switch attrType {
 	case "INTEGER":
 		var v INTEGER
@@ -206,7 +161,7 @@ func (v HEXADECIMAL) writetobuf(buf *bytes.Buffer) {
 }
 
 //
-func isvalidAttributeType(s string) bool {
+func isValidAttributeType(s string) bool {
 	if s == "INTEGER" || s == "STRING" || s == "IPADDR" || s == "TAG_INT" || s == "TAG_STR" || s == "HEXADECIMAL" {
 		return true
 	}

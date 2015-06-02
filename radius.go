@@ -12,29 +12,29 @@ import (
 	"bytes"
 	"encoding/binary"
 	"errors"
-	"fmt"
-	"net"
+	//"fmt"
+	//"net"
 )
 
-func GetRadius(conn *net.UDPConn) (*Radius, error) {
-	var inbytes [4096]byte
-	n, addr, err := conn.ReadFromUDP(inbytes[0:])
-	if err != nil {
-		fmt.Println(err)
-	}
+// func GetRadius(conn *net.UDPConn) (*Radius, error) {
+// 	var inbytes [4096]byte
+// 	n, addr, err := conn.ReadFromUDP(inbytes[0:])
+// 	if err != nil {
+// 		fmt.Println(err)
+// 	}
 
-	fmt.Println(n, addr)
-	fmt.Println(inbytes[0:n])
+// 	fmt.Println(n, addr)
+// 	fmt.Println(inbytes[0:n])
 
-	r := NewRadius()
-	r.FillFromBuf(bytes.NewBuffer(inbytes[0:n]))
+// 	r := NewRadius()
+// 	r.FillFromBuf(bytes.NewBuffer(inbytes[0:n]))
 
-	fmt.Println(r)
+// 	fmt.Println(r)
 
-	//conn.WriteToUDP(inbytes[0:n], addr)
+// 	//conn.WriteToUDP(inbytes[0:n], addr)
 
-	return r, err
-}
+// 	return r, err
+// }
 
 //
 func NewRadius() *Radius {
@@ -46,29 +46,29 @@ func NewRadius() *Radius {
 
 func (r *Radius) FillFromBuf(buf *bytes.Buffer) error {
 
-	err := r.getRadiusCodeFbuff(buf)
+	err := r.getCodeFromBuff(buf)
 	if err != nil {
 		return errors.New("Format wrong on R_code")
 	}
 
-	err = r.getRadiusIdFbuff(buf)
+	err = r.getIdFromBuff(buf)
 	if err != nil {
 		return errors.New("Format wrong on R_Id")
 	}
 
-	err = r.getRadiusLenFbuff(buf)
+	err = r.getLenFromBuff(buf)
 	if err != nil {
 		return errors.New("Format wrong on R_Length")
 	}
 
-	err = r.getRadiusAuthenticatorFbuff(buf)
+	err = r.getAuthenticatorFromBuff(buf)
 	if err != nil {
 		return errors.New("Format wrong on R_Length")
 	}
 
-	err = r.getRadiusAttsFbuff(buf)
+	err = r.getAttsFromBuff(buf)
 	if err != nil {
-		return errors.New("Format wrong on R_Attributes")
+		return err
 	}
 
 	return nil
@@ -85,21 +85,14 @@ func (r *Radius) WriteToBuff() *bytes.Buffer {
 		for _, vv := range r.AttributeList.list_name[v] {
 			switch v.(type) {
 			case AttId:
-				buf.WriteByte(byte(v.(AttId)))
+				v.Write(buf)
 				buf.WriteByte(byte(vv.Len() + 2))
 				vv.writetobuf(buf)
-			case AttVId:
-				buf.WriteByte(byte(VENDOR_SPECIFIC))
+			case AttIdV:
+				buf.WriteByte(byte(ATTID_VENDOR_SPECIFIC))
 				buf.WriteByte(byte(vv.Len() + 8))
-				v.writevendor(buf)
-				v.writeAtt(buf)
+				v.Write(buf)
 				buf.WriteByte(byte(vv.Len() + 2))
-				vv.writetobuf(buf)
-			case AttV4Id:
-				buf.WriteByte(byte(VENDOR_SPECIFIC))
-				buf.WriteByte(byte(vv.Len() + 10))
-				v.writevendor(buf)
-				v.writeAtt(buf)
 				vv.writetobuf(buf)
 			}
 		}
@@ -116,10 +109,13 @@ func (r *Radius) GetLength() R_Length {
 			switch v.(type) {
 			case AttId:
 				l += R_Length(vv.Len() + 2)
-			case AttVId:
-				l += R_Length(vv.Len() + 8)
-			case AttV4Id:
-				l += R_Length(vv.Len() + 10)
+			case AttIdV:
+				if v.(AttIdV).VendorId.Typestring() == "IETF" {
+					l += R_Length(vv.Len() + 8)
+				}
+				if v.(AttIdV).VendorId.Typestring() == "TYPE4" {
+					l += R_Length(vv.Len() + 8)
+				}
 			}
 		}
 	}

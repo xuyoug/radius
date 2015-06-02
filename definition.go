@@ -1,240 +1,262 @@
 package radius
 
-import (
-	"strings"
-)
-
-//定义标准属性列表
+//定义标准属性
 const (
-	ATT_NO                       AttId = 0
-	USER_NAME                    AttId = 1
-	USER_PASSWORD                AttId = 2
-	CHAP_PASSWORD                AttId = 3
-	NAS_IP_ADDRESS               AttId = 4
-	NAS_PORT                     AttId = 5
-	SERVICE_TYPE                 AttId = 6
-	FRAMED_PROTOCOL              AttId = 7
-	FRAMED_IP_ADDRESS            AttId = 8
-	FRAMED_IP_NETMASK            AttId = 9
-	FRAMED_ROUTING               AttId = 10
-	FILTER_ID                    AttId = 11
-	FRAMED_MTU                   AttId = 12
-	FRAMED_COMPRESSION           AttId = 13
-	LOGIN_IP_HOST                AttId = 14
-	LOGIN_SERVICE                AttId = 15
-	LOGIN_TCP_PORT               AttId = 16
-	OLD_PASSWORD                 AttId = 17
-	REPLY_MESSAGE                AttId = 18
-	CALLBACK_NUMBER              AttId = 19
-	CALLBACK_ID                  AttId = 20
-	EXPIRATION                   AttId = 21
-	FRAMED_ROUTE                 AttId = 22
-	FRAMED_IPX_NETWORK           AttId = 23
-	STATE                        AttId = 24
-	CLASS                        AttId = 25
-	VENDOR_SPECIFIC              AttId = 26
-	SESSION_TIMEOUT              AttId = 27
-	IDLE_TIMEOUT                 AttId = 28
-	TERMINATION_ACTION           AttId = 29
-	CALLED_STATION_ID            AttId = 30
-	CALLING_STATION_ID           AttId = 31
-	NAS_IDENTIFIER               AttId = 32
-	PROXY_STATE                  AttId = 33
-	LOGIN_LAT_SERVICE            AttId = 34
-	LOGIN_LAT_NODE               AttId = 35
-	LOGIN_LAT_GROUP              AttId = 36
-	FRAMED_APPLETALK_LINK        AttId = 37
-	FRAMED_APPLETALK_NETWORK     AttId = 38
-	FRAMED_APPLETALK_ZONE        AttId = 39
-	ACCT_STATUS_TYPE             AttId = 40
-	ACCT_DELAY_TIME              AttId = 41
-	ACCT_INPUT_OCTETS            AttId = 42
-	ACCT_OUTPUT_OCTETS           AttId = 43
-	ACCT_SESSION_ID              AttId = 44
-	ACCT_AUTHENTIC               AttId = 45
-	ACCT_SESSION_TIME            AttId = 46
-	ACCT_INPUT_PACKETS           AttId = 47
-	ACCT_OUTPUT_PACKETS          AttId = 48
-	ACCT_TERMINATE_CAUSE         AttId = 49
-	ACCT_MULTI_SESSION_ID        AttId = 50
-	ACCT_LINK_COUNT              AttId = 51
-	ACCT_INPUT_GIGAWORDS         AttId = 52
-	ACCT_OUTPUT_GIGAWORDS        AttId = 53
-	EVENT_TIMESTAMP              AttId = 55
-	CHAP_CHALLENGE               AttId = 60
-	NAS_PORT_TYPE                AttId = 61
-	PORT_LIMIT                   AttId = 62
-	LOGIN_LAT_PORT               AttId = 63
-	TUNNEL_TYPE                  AttId = 64
-	TUNNEL_MEDIUM_TYPE           AttId = 65
-	TUNNEL_CLIENT_ENDPOINT       AttId = 66
-	TUNNEL_SERVER_ENDPOINT       AttId = 67
-	ACCT_TUNNEL_CONNECTION       AttId = 68
-	TUNNEL_PASSWORD              AttId = 69
-	ARAP_PASSWORD                AttId = 70
-	ARAP_FEATURES                AttId = 71
-	ARAP_ZONE_ACCESS             AttId = 72
-	ARAP_SECURITY                AttId = 73
-	ARAP_SECURITY_DATA           AttId = 74
-	PASSWORD_RETRY               AttId = 75
-	PROMPT                       AttId = 76
-	CONNECT_INFO                 AttId = 77
-	CONFIGURATION_TOKEN          AttId = 78
-	EAP_MESSAGE                  AttId = 79
-	MESSAGE_AUTHENTICATOR        AttId = 80
-	TUNNEL_PRIVATE_GROUP_ID      AttId = 81
-	TUNNEL_ASSIGNMENT_ID         AttId = 82
-	TUNNEL_PREFERENCE            AttId = 83
-	ARAP_CHALLENGE_RESPONSE      AttId = 84
-	ACCT_INTERIM_INTERVAL        AttId = 85
-	ACCT_TUNNEL_PACKETS_LOST     AttId = 86
-	NAS_PORT_ID                  AttId = 87
-	FRAMED_POOL                  AttId = 88
-	TUNNEL_CLIENT_AUTH_ID        AttId = 90
-	TUNNEL_SERVER_AUTH_ID        AttId = 91
-	ASCEND_CBCP_ENABLE           AttId = 112
-	ASCEND_CBCP_MODE             AttId = 113
-	ASCEND_CBCP_DELAY            AttId = 114
-	ASCEND_CBCP_TRUNK_GROUP      AttId = 115
-	ASCEND_FCP_PARAMETER         AttId = 119
-	ASCEND_MODEM_PORTNO          AttId = 120
-	ASCEND_MODEM_SLOTNO          AttId = 121
-	ASCEND_MODEM_SHELFNO         AttId = 122
-	ASCEND_CALL_ATTEMPT_LIMIT    AttId = 123
-	ASCEND_CALL_BLOCK_DURATION   AttId = 124
-	ASCEND_MAXIMUM_CALL_DURATION AttId = 125
-	ASCEND_TEMPORARY_RTES        AttId = 126
-	TUNNELING_PROTOCOL           AttId = 127
-	ASCEND_SHARED_PROFILE_ENABLE AttId = 128
-	ASCEND_PRIMARY_HOME_AGENT    AttId = 129
-	ASCEND_SECONDARY_HOME_AGENT  AttId = 130
-	ASCEND_DIALOUT_ALLOWED       AttId = 131
-	ASCEND_CLIENT_GATEWAY        AttId = 132
-	ASCEND_BACP_ENABLE           AttId = 133
-	ASCEND_DHCP_MAXIMUM_LEASES   AttId = 134
-	ASCEND_CLIENT_PRIMARY_DNS    AttId = 135
-	ASCEND_CLIENT_SECONDARY_DNS  AttId = 136
-	ASCEND_CLIENT_ASSIGN_DNS     AttId = 137
-	ASCEND_USER_ACCT_TYPE        AttId = 138
-	ASCEND_USER_ACCT_HOST        AttId = 139
-	ASCEND_USER_ACCT_PORT        AttId = 140
-	ASCEND_USER_ACCT_KEY         AttId = 141
-	ASCEND_USER_ACCT_BASE        AttId = 142
-	ASCEND_USER_ACCT_TIME        AttId = 143
-	ASCEND_ASSIGN_IP_CLIENT      AttId = 144
-	ASCEND_ASSIGN_IP_SERVER      AttId = 145
-	ASCEND_ASSIGN_IP_GLOBAL_POOL AttId = 146
-	ASCEND_DHCP_REPLY            AttId = 147
-	ASCEND_DHCP_POOL_NUMBER      AttId = 148
-	ASCEND_EXPECT_CALLBACK       AttId = 149
-	ASCEND_EVENT_TYPE            AttId = 150
-	ASCEND_SESSION_SVR_KEY       AttId = 151
-	ASCEND_MULTICAST_RATE_LIMIT  AttId = 152
-	ASCEND_IF_NETMASK            AttId = 153
-	ASCEND_REMOTE_ADDR           AttId = 154
-	ASCEND_MULTICAST_CLIENT      AttId = 155
-	ASCEND_FR_CIRCUIT_NAME       AttId = 156
-	ASCEND_FR_LINKUP             AttId = 157
-	ASCEND_FR_NAILED_GRP         AttId = 158
-	ASCEND_FR_TYPE               AttId = 159
-	ASCEND_FR_LINK_MGT           AttId = 160
-	ASCEND_FR_N391               AttId = 161
-	ASCEND_FR_DCE_N392           AttId = 162
-	ASCEND_FR_DTE_N392           AttId = 163
-	ASCEND_FR_DCE_N393           AttId = 164
-	ASCEND_FR_DTE_N393           AttId = 165
-	ASCEND_FR_T391               AttId = 166
-	ASCEND_FR_T392               AttId = 167
-	ASCEND_BRIDGE_ADDRESS        AttId = 168
-	ASCEND_TS_IDLE_LIMIT         AttId = 169
-	ASCEND_TS_IDLE_MODE          AttId = 170
-	ASCEND_DBA_MONITOR           AttId = 171
-	ASCEND_BASE_CHANNEL_COUNT    AttId = 172
-	ASCEND_MINIMUM_CHANNELS      AttId = 173
-	ASCEND_IPX_ROUTE             AttId = 174
-	ASCEND_FT1_CALLER            AttId = 175
-	ASCEND_BACKUP                AttId = 176
-	ASCEND_CALL_TYPE             AttId = 177
-	ASCEND_GROUP                 AttId = 178
-	ASCEND_FR_DLCI               AttId = 179
-	ASCEND_FR_PROFILE_NAME       AttId = 180
-	ASCEND_ARA_PW                AttId = 181
-	ASCEND_IPX_NODE_ADDR         AttId = 182
-	ASCEND_HOME_AGENT_IP_ADDR    AttId = 183
-	ASCEND_HOME_AGENT_PASSWORD   AttId = 184
-	ASCEND_HOME_NETWORK_NAME     AttId = 185
-	ASCEND_HOME_AGENT_UDP_PORT   AttId = 186
-	ASCEND_MULTILINK_ID          AttId = 187
-	ASCEND_NUM_IN_MULTILINK      AttId = 188
-	ASCEND_FIRST_DEST            AttId = 189
-	ASCEND_PRE_INPUT_OCTETS      AttId = 190
-	ASCEND_PRE_OUTPUT_OCTETS     AttId = 191
-	ASCEND_PRE_INPUT_PACKETS     AttId = 192
-	ASCEND_PRE_OUTPUT_PACKETS    AttId = 193
-	ASCEND_MAXIMUM_TIME          AttId = 194
-	ASCEND_DISCONNECT_CAUSE      AttId = 195
-	ASCEND_CONNECT_PROGRESS      AttId = 196
-	ASCEND_DATA_RATE             AttId = 197
-	ASCEND_PRESESSION_TIME       AttId = 198
-	ASCEND_TOKEN_IDLE            AttId = 199
-	ASCEND_TOKEN_IMMEDIATE       AttId = 200
-	ASCEND_REQUIRE_AUTH          AttId = 201
-	ASCEND_NUMBER_SESSIONS       AttId = 202
-	ASCEND_AUTHEN_ALIAS          AttId = 203
-	ASCEND_TOKEN_EXPIRY          AttId = 204
-	ASCEND_MENU_SELECTOR         AttId = 205
-	ASCEND_MENU_ITEM             AttId = 206
-	ASCEND_PW_WARNTIME           AttId = 207
-	ASCEND_PW_LIFETIME           AttId = 208
-	ASCEND_IP_DIRECT             AttId = 209
-	ASCEND_PPP_VJ_SLOT_COMP      AttId = 210
-	ASCEND_PPP_VJ_1172           AttId = 211
-	ASCEND_PPP_ASYNC_MAP         AttId = 212
-	ASCEND_THIRD_PROMPT          AttId = 213
-	ASCEND_SEND_SECRET           AttId = 214
-	ASCEND_RECEIVE_SECRET        AttId = 215
-	ASCEND_IPX_PEER_MODE         AttId = 216
-	ASCEND_IP_POOL_DEFINITION    AttId = 217
-	ASCEND_ASSIGN_IP_POOL        AttId = 218
-	ASCEND_FR_DIRECT             AttId = 219
-	ASCEND_FR_DIRECT_PROFILE     AttId = 220
-	ASCEND_FR_DIRECT_DLCI        AttId = 221
-	ASCEND_HANDLE_IPX            AttId = 222
-	ASCEND_NETWARE_TIMEOUT       AttId = 223
-	ASCEND_IPX_ALIAS             AttId = 224
-	ASCEND_METRIC                AttId = 225
-	ASCEND_PRI_NUMBER_TYPE       AttId = 226
-	ASCEND_DIAL_NUMBER           AttId = 227
-	ASCEND_ROUTE_IP              AttId = 228
-	ASCEND_ROUTE_IPX             AttId = 229
-	ASCEND_BRIDGE                AttId = 230
-	ASCEND_SEND_AUTH             AttId = 231
-	ASCEND_SEND_PASSWD           AttId = 232
-	ASCEND_LINK_COMPRESSION      AttId = 233
-	ASCEND_TARGET_UTIL           AttId = 234
-	ASCEND_MAXIMUM_CHANNELS      AttId = 235
-	ASCEND_INC_CHANNEL_COUNT     AttId = 236
-	ASCEND_DEC_CHANNEL_COUNT     AttId = 237
-	ASCEND_SECONDS_OF_HISTORY    AttId = 238
-	ASCEND_HISTORY_WEIGH_TYPE    AttId = 239
-	ASCEND_ADD_SECONDS           AttId = 240
-	ASCEND_REMOVE_SECONDS        AttId = 241
-	ASCEND_DATA_FILTER           AttId = 242
-	ASCEND_CALL_FILTER           AttId = 243
-	ASCEND_IDLE_LIMIT            AttId = 244
-	ASCEND_PREEMPT_LIMIT         AttId = 245
-	ASCEND_CALLBACK              AttId = 246
-	ASCEND_DATA_SVC              AttId = 247
-	ASCEND_FORCE_56              AttId = 248
-	ASCEND_BILLING_NUMBER        AttId = 249
-	ASCEND_CALL_BY_CALL          AttId = 250
-	ASCEND_TRANSIT_NUMBER        AttId = 251
-	ASCEND_HOST_INFO             AttId = 252
-	ASCEND_PPP_ADDRESS           AttId = 253
-	ASCEND_MPP_IDLE_PERCENT      AttId = 254
-	ASCEND_XMIT_RATE             AttId = 255
+	ATT_NO                             AttId = 0
+	ATTID_USER_NAME                    AttId = 1
+	ATTID_USER_PASSWORD                AttId = 2
+	ATTID_CHAP_PASSWORD                AttId = 3
+	ATTID_NAS_IP_ADDRESS               AttId = 4
+	ATTID_NAS_PORT                     AttId = 5
+	ATTID_SERVICE_TYPE                 AttId = 6
+	ATTID_FRAMED_PROTOCOL              AttId = 7
+	ATTID_FRAMED_IP_ADDRESS            AttId = 8
+	ATTID_FRAMED_IP_NETMASK            AttId = 9
+	ATTID_FRAMED_ROUTING               AttId = 10
+	ATTID_FILTER_ID                    AttId = 11
+	ATTID_FRAMED_MTU                   AttId = 12
+	ATTID_FRAMED_COMPRESSION           AttId = 13
+	ATTID_LOGIN_IP_HOST                AttId = 14
+	ATTID_LOGIN_SERVICE                AttId = 15
+	ATTID_LOGIN_TCP_PORT               AttId = 16
+	ATTID_OLD_PASSWORD                 AttId = 17
+	ATTID_REPLY_MESSAGE                AttId = 18
+	ATTID_CALLBACK_NUMBER              AttId = 19
+	ATTID_CALLBACK_ID                  AttId = 20
+	ATTID_EXPIRATION                   AttId = 21
+	ATTID_FRAMED_ROUTE                 AttId = 22
+	ATTID_FRAMED_IPX_NETWORK           AttId = 23
+	ATTID_STATE                        AttId = 24
+	ATTID_CLASS                        AttId = 25
+	ATTID_VENDOR_SPECIFIC              AttId = 26
+	ATTID_SESSION_TIMEOUT              AttId = 27
+	ATTID_IDLE_TIMEOUT                 AttId = 28
+	ATTID_TERMINATION_ACTION           AttId = 29
+	ATTID_CALLED_STATION_ID            AttId = 30
+	ATTID_CALLING_STATION_ID           AttId = 31
+	ATTID_NAS_IDENTIFIER               AttId = 32
+	ATTID_PROXY_STATE                  AttId = 33
+	ATTID_LOGIN_LAT_SERVICE            AttId = 34
+	ATTID_LOGIN_LAT_NODE               AttId = 35
+	ATTID_LOGIN_LAT_GROUP              AttId = 36
+	ATTID_FRAMED_APPLETALK_LINK        AttId = 37
+	ATTID_FRAMED_APPLETALK_NETWORK     AttId = 38
+	ATTID_FRAMED_APPLETALK_ZONE        AttId = 39
+	ATTID_ACCT_STATUS_TYPE             AttId = 40
+	ATTID_ACCT_DELAY_TIME              AttId = 41
+	ATTID_ACCT_INPUT_OCTETS            AttId = 42
+	ATTID_ACCT_OUTPUT_OCTETS           AttId = 43
+	ATTID_ACCT_SESSION_ID              AttId = 44
+	ATTID_ACCT_AUTHENTIC               AttId = 45
+	ATTID_ACCT_SESSION_TIME            AttId = 46
+	ATTID_ACCT_INPUT_PACKETS           AttId = 47
+	ATTID_ACCT_OUTPUT_PACKETS          AttId = 48
+	ATTID_ACCT_TERMINATE_CAUSE         AttId = 49
+	ATTID_ACCT_MULTI_SESSION_ID        AttId = 50
+	ATTID_ACCT_LINK_COUNT              AttId = 51
+	ATTID_ACCT_INPUT_GIGAWORDS         AttId = 52
+	ATTID_ACCT_OUTPUT_GIGAWORDS        AttId = 53
+	ATTID_EVENT_TIMESTAMP              AttId = 55
+	ATTID_CHAP_CHALLENGE               AttId = 60
+	ATTID_NAS_PORT_TYPE                AttId = 61
+	ATTID_PORT_LIMIT                   AttId = 62
+	ATTID_LOGIN_LAT_PORT               AttId = 63
+	ATTID_TUNNEL_TYPE                  AttId = 64
+	ATTID_TUNNEL_MEDIUM_TYPE           AttId = 65
+	ATTID_TUNNEL_CLIENT_ENDPOINT       AttId = 66
+	ATTID_TUNNEL_SERVER_ENDPOINT       AttId = 67
+	ATTID_ACCT_TUNNEL_CONNECTION       AttId = 68
+	ATTID_TUNNEL_PASSWORD              AttId = 69
+	ATTID_ARAP_PASSWORD                AttId = 70
+	ATTID_ARAP_FEATURES                AttId = 71
+	ATTID_ARAP_ZONE_ACCESS             AttId = 72
+	ATTID_ARAP_SECURITY                AttId = 73
+	ATTID_ARAP_SECURITY_DATA           AttId = 74
+	ATTID_PASSWORD_RETRY               AttId = 75
+	ATTID_PROMPT                       AttId = 76
+	ATTID_CONNECT_INFO                 AttId = 77
+	ATTID_CONFIGURATION_TOKEN          AttId = 78
+	ATTID_EAP_MESSAGE                  AttId = 79
+	ATTID_MESSAGE_AUTHENTICATOR        AttId = 80
+	ATTID_TUNNEL_PRIVATE_GROUP_ID      AttId = 81
+	ATTID_TUNNEL_ASSIGNMENT_ID         AttId = 82
+	ATTID_TUNNEL_PREFERENCE            AttId = 83
+	ATTID_ARAP_CHALLENGE_RESPONSE      AttId = 84
+	ATTID_ACCT_INTERIM_INTERVAL        AttId = 85
+	ATTID_ACCT_TUNNEL_PACKETS_LOST     AttId = 86
+	ATTID_NAS_PORT_ID                  AttId = 87
+	ATTID_FRAMED_POOL                  AttId = 88
+	ATTID_TUNNEL_CLIENT_AUTH_ID        AttId = 90
+	ATTID_TUNNEL_SERVER_AUTH_ID        AttId = 91
+	ATTID_ASCEND_CBCP_ENABLE           AttId = 112
+	ATTID_ASCEND_CBCP_MODE             AttId = 113
+	ATTID_ASCEND_CBCP_DELAY            AttId = 114
+	ATTID_ASCEND_CBCP_TRUNK_GROUP      AttId = 115
+	ATTID_ASCEND_FCP_PARAMETER         AttId = 119
+	ATTID_ASCEND_MODEM_PORTNO          AttId = 120
+	ATTID_ASCEND_MODEM_SLOTNO          AttId = 121
+	ATTID_ASCEND_MODEM_SHELFNO         AttId = 122
+	ATTID_ASCEND_CALL_ATTEMPT_LIMIT    AttId = 123
+	ATTID_ASCEND_CALL_BLOCK_DURATION   AttId = 124
+	ATTID_ASCEND_MAXIMUM_CALL_DURATION AttId = 125
+	ATTID_ASCEND_TEMPORARY_RTES        AttId = 126
+	ATTID_TUNNELING_PROTOCOL           AttId = 127
+	ATTID_ASCEND_SHARED_PROFILE_ENABLE AttId = 128
+	ATTID_ASCEND_PRIMARY_HOME_AGENT    AttId = 129
+	ATTID_ASCEND_SECONDARY_HOME_AGENT  AttId = 130
+	ATTID_ASCEND_DIALOUT_ALLOWED       AttId = 131
+	ATTID_ASCEND_CLIENT_GATEWAY        AttId = 132
+	ATTID_ASCEND_BACP_ENABLE           AttId = 133
+	ATTID_ASCEND_DHCP_MAXIMUM_LEASES   AttId = 134
+	ATTID_ASCEND_CLIENT_PRIMARY_DNS    AttId = 135
+	ATTID_ASCEND_CLIENT_SECONDARY_DNS  AttId = 136
+	ATTID_ASCEND_CLIENT_ASSIGN_DNS     AttId = 137
+	ATTID_ASCEND_USER_ACCT_TYPE        AttId = 138
+	ATTID_ASCEND_USER_ACCT_HOST        AttId = 139
+	ATTID_ASCEND_USER_ACCT_PORT        AttId = 140
+	ATTID_ASCEND_USER_ACCT_KEY         AttId = 141
+	ATTID_ASCEND_USER_ACCT_BASE        AttId = 142
+	ATTID_ASCEND_USER_ACCT_TIME        AttId = 143
+	ATTID_ASCEND_ASSIGN_IP_CLIENT      AttId = 144
+	ATTID_ASCEND_ASSIGN_IP_SERVER      AttId = 145
+	ATTID_ASCEND_ASSIGN_IP_GLOBAL_POOL AttId = 146
+	ATTID_ASCEND_DHCP_REPLY            AttId = 147
+	ATTID_ASCEND_DHCP_POOL_NUMBER      AttId = 148
+	ATTID_ASCEND_EXPECT_CALLBACK       AttId = 149
+	ATTID_ASCEND_EVENT_TYPE            AttId = 150
+	ATTID_ASCEND_SESSION_SVR_KEY       AttId = 151
+	ATTID_ASCEND_MULTICAST_RATE_LIMIT  AttId = 152
+	ATTID_ASCEND_IF_NETMASK            AttId = 153
+	ATTID_ASCEND_REMOTE_ADDR           AttId = 154
+	ATTID_ASCEND_MULTICAST_CLIENT      AttId = 155
+	ATTID_ASCEND_FR_CIRCUIT_NAME       AttId = 156
+	ATTID_ASCEND_FR_LINKUP             AttId = 157
+	ATTID_ASCEND_FR_NAILED_GRP         AttId = 158
+	ATTID_ASCEND_FR_TYPE               AttId = 159
+	ATTID_ASCEND_FR_LINK_MGT           AttId = 160
+	ATTID_ASCEND_FR_N391               AttId = 161
+	ATTID_ASCEND_FR_DCE_N392           AttId = 162
+	ATTID_ASCEND_FR_DTE_N392           AttId = 163
+	ATTID_ASCEND_FR_DCE_N393           AttId = 164
+	ATTID_ASCEND_FR_DTE_N393           AttId = 165
+	ATTID_ASCEND_FR_T391               AttId = 166
+	ATTID_ASCEND_FR_T392               AttId = 167
+	ATTID_ASCEND_BRIDGE_ADDRESS        AttId = 168
+	ATTID_ASCEND_TS_IDLE_LIMIT         AttId = 169
+	ATTID_ASCEND_TS_IDLE_MODE          AttId = 170
+	ATTID_ASCEND_DBA_MONITOR           AttId = 171
+	ATTID_ASCEND_BASE_CHANNEL_COUNT    AttId = 172
+	ATTID_ASCEND_MINIMUM_CHANNELS      AttId = 173
+	ATTID_ASCEND_IPX_ROUTE             AttId = 174
+	ATTID_ASCEND_FT1_CALLER            AttId = 175
+	ATTID_ASCEND_BACKUP                AttId = 176
+	ATTID_ASCEND_CALL_TYPE             AttId = 177
+	ATTID_ASCEND_GROUP                 AttId = 178
+	ATTID_ASCEND_FR_DLCI               AttId = 179
+	ATTID_ASCEND_FR_PROFILE_NAME       AttId = 180
+	ATTID_ASCEND_ARA_PW                AttId = 181
+	ATTID_ASCEND_IPX_NODE_ADDR         AttId = 182
+	ATTID_ASCEND_HOME_AGENT_IP_ADDR    AttId = 183
+	ATTID_ASCEND_HOME_AGENT_PASSWORD   AttId = 184
+	ATTID_ASCEND_HOME_NETWORK_NAME     AttId = 185
+	ATTID_ASCEND_HOME_AGENT_UDP_PORT   AttId = 186
+	ATTID_ASCEND_MULTILINK_ID          AttId = 187
+	ATTID_ASCEND_NUM_IN_MULTILINK      AttId = 188
+	ATTID_ASCEND_FIRST_DEST            AttId = 189
+	ATTID_ASCEND_PRE_INPUT_OCTETS      AttId = 190
+	ATTID_ASCEND_PRE_OUTPUT_OCTETS     AttId = 191
+	ATTID_ASCEND_PRE_INPUT_PACKETS     AttId = 192
+	ATTID_ASCEND_PRE_OUTPUT_PACKETS    AttId = 193
+	ATTID_ASCEND_MAXIMUM_TIME          AttId = 194
+	ATTID_ASCEND_DISCONNECT_CAUSE      AttId = 195
+	ATTID_ASCEND_CONNECT_PROGRESS      AttId = 196
+	ATTID_ASCEND_DATA_RATE             AttId = 197
+	ATTID_ASCEND_PRESESSION_TIME       AttId = 198
+	ATTID_ASCEND_TOKEN_IDLE            AttId = 199
+	ATTID_ASCEND_TOKEN_IMMEDIATE       AttId = 200
+	ATTID_ASCEND_REQUIRE_AUTH          AttId = 201
+	ATTID_ASCEND_NUMBER_SESSIONS       AttId = 202
+	ATTID_ASCEND_AUTHEN_ALIAS          AttId = 203
+	ATTID_ASCEND_TOKEN_EXPIRY          AttId = 204
+	ATTID_ASCEND_MENU_SELECTOR         AttId = 205
+	ATTID_ASCEND_MENU_ITEM             AttId = 206
+	ATTID_ASCEND_PW_WARNTIME           AttId = 207
+	ATTID_ASCEND_PW_LIFETIME           AttId = 208
+	ATTID_ASCEND_IP_DIRECT             AttId = 209
+	ATTID_ASCEND_PPP_VJ_SLOT_COMP      AttId = 210
+	ATTID_ASCEND_PPP_VJ_1172           AttId = 211
+	ATTID_ASCEND_PPP_ASYNC_MAP         AttId = 212
+	ATTID_ASCEND_THIRD_PROMPT          AttId = 213
+	ATTID_ASCEND_SEND_SECRET           AttId = 214
+	ATTID_ASCEND_RECEIVE_SECRET        AttId = 215
+	ATTID_ASCEND_IPX_PEER_MODE         AttId = 216
+	ATTID_ASCEND_IP_POOL_DEFINITION    AttId = 217
+	ATTID_ASCEND_ASSIGN_IP_POOL        AttId = 218
+	ATTID_ASCEND_FR_DIRECT             AttId = 219
+	ATTID_ASCEND_FR_DIRECT_PROFILE     AttId = 220
+	ATTID_ASCEND_FR_DIRECT_DLCI        AttId = 221
+	ATTID_ASCEND_HANDLE_IPX            AttId = 222
+	ATTID_ASCEND_NETWARE_TIMEOUT       AttId = 223
+	ATTID_ASCEND_IPX_ALIAS             AttId = 224
+	ATTID_ASCEND_METRIC                AttId = 225
+	ATTID_ASCEND_PRI_NUMBER_TYPE       AttId = 226
+	ATTID_ASCEND_DIAL_NUMBER           AttId = 227
+	ATTID_ASCEND_ROUTE_IP              AttId = 228
+	ATTID_ASCEND_ROUTE_IPX             AttId = 229
+	ATTID_ASCEND_BRIDGE                AttId = 230
+	ATTID_ASCEND_SEND_AUTH             AttId = 231
+	ATTID_ASCEND_SEND_PASSWD           AttId = 232
+	ATTID_ASCEND_LINK_COMPRESSION      AttId = 233
+	ATTID_ASCEND_TARGET_UTIL           AttId = 234
+	ATTID_ASCEND_MAXIMUM_CHANNELS      AttId = 235
+	ATTID_ASCEND_INC_CHANNEL_COUNT     AttId = 236
+	ATTID_ASCEND_DEC_CHANNEL_COUNT     AttId = 237
+	ATTID_ASCEND_SECONDS_OF_HISTORY    AttId = 238
+	ATTID_ASCEND_HISTORY_WEIGH_TYPE    AttId = 239
+	ATTID_ASCEND_ADD_SECONDS           AttId = 240
+	ATTID_ASCEND_REMOVE_SECONDS        AttId = 241
+	ATTID_ASCEND_DATA_FILTER           AttId = 242
+	ATTID_ASCEND_CALL_FILTER           AttId = 243
+	ATTID_ASCEND_IDLE_LIMIT            AttId = 244
+	ATTID_ASCEND_PREEMPT_LIMIT         AttId = 245
+	ATTID_ASCEND_CALLBACK              AttId = 246
+	ATTID_ASCEND_DATA_SVC              AttId = 247
+	ATTID_ASCEND_FORCE_56              AttId = 248
+	ATTID_ASCEND_BILLING_NUMBER        AttId = 249
+	ATTID_ASCEND_CALL_BY_CALL          AttId = 250
+	ATTID_ASCEND_TRANSIT_NUMBER        AttId = 251
+	ATTID_ASCEND_HOST_INFO             AttId = 252
+	ATTID_ASCEND_PPP_ADDRESS           AttId = 253
+	ATTID_ASCEND_MPP_IDLE_PERCENT      AttId = 254
+	ATTID_ASCEND_XMIT_RATE             AttId = 255
 )
 
+//定义厂商列表
+const (
+	VENDOR_NO         VendorId = 0 //本包中  此vendorid作为标准属性的封装，故NAME，STRING、ISVAILD方法中不认为是错误
+	VENDOR_ACC        VendorId = 5
+	VENDOR_CISCO      VendorId = 9
+	VENDOR_XYLOGICS   VendorId = 15
+	VENDOR_MERIT      VendorId = 61
+	VENDOR_GANDALF    VendorId = 64
+	VENDOR_SHIVA      VendorId = 166
+	VENDOR_LIVINGSTON VendorId = 307
+	VENDOR_MICROSOFT  VendorId = 311
+	VENDOR_3COM       VendorId = 429
+	VENDOR_ASCEND     VendorId = 529
+	VENDOR_BAY        VendorId = 1584
+	VENDOR_LUCENT     VendorId = 1751
+	VENDOR_REDBACK    VendorId = 2352
+	VENDOR_APTIS      VendorId = 2634
+	VENDOR_MASTERSOFT VendorId = 5401
+	VENDOR_QUINTUM    VendorId = 6618
+	VENDOR_HUAWEI     VendorId = 2011
+	VENDOR_JUNIPER    VendorId = 4874
+	VENDOR_ZTE        VendorId = 3902
+	VENDOR_ALCATEL    VendorId = 6527
+)
+
+//Const_definition描述属性名称和类型结构
 type Const_definition struct {
 	Name string
 	Type string
@@ -700,42 +722,56 @@ var list_attributestand_name map[string]AttId = map[string]AttId{
 	"ASCEND_XMIT_RATE":             255,
 }
 
-//String返回AttId其名字
-func (a AttId) String() string {
-	s, ok := list_attributestand_id[a]
-	if ok {
-		return s.Name
-	}
-	return ""
+//定义VEBDOR的ID映射
+var list_vendor_id map[VendorId]Const_definition = map[VendorId]Const_definition{
+	5:    {"ACC", "IETF"},
+	9:    {"CISCO", "IETF"},
+	15:   {"XYLOGICS", "IETF"},
+	61:   {"MERIT", "IETF"},
+	64:   {"GANDALF", "IETF"},
+	166:  {"SHIVA", "IETF"},
+	307:  {"LIVINGSTON", "IETF"},
+	311:  {"MICROSOFT", "IETF"},
+	429:  {"3COM", "TYPE4"},
+	529:  {"ASCEND", "IETF"},
+	1584: {"BAY", "IETF"},
+	1751: {"LUCENT", "IETF"},
+	2352: {"REDBACK", "IETF"},
+	2634: {"APTIS", "IETF"},
+	5401: {"MASTERSOFT", "IETF"},
+	6618: {"QUINTUM", "IETF"},
+	2011: {"HUAWEI", "IETF"},
+	4874: {"JUNIPER", "IETF"},
+	3902: {"ZTE", "IETF"},
+	6527: {"ALCATEL", "IETF"},
 }
 
-//Typestring返回AttId其类型
-func (a AttId) Typestring() string {
-	s, ok := list_attributestand_id[a]
-	if ok {
-		return s.Type
-	}
-	return ""
-}
-
-//Typestring返回AttId其类型
-func (a AttId) IsValid() bool {
-	_, ok := list_attributestand_id[a]
-	return ok
-}
-
-//根据名字返回AttId
-func GetAttId(s string) (AttId, error) {
-	s = strpredone(s)
-	a, ok := list_attributestand_name[s]
-	if ok {
-		return a, nil
-	}
-	return ATT_NO, ERR_ATT_UNK
+//定义VENDOR的NAME映射
+var list_vendor_name map[string]VendorId = map[string]VendorId{
+	"ACC":        5,
+	"CISCO":      9,
+	"XYLOGICS":   15,
+	"MERIT":      61,
+	"GANDALF":    64,
+	"SHIVA":      166,
+	"LIVINGSTON": 307,
+	"MICROSOFT":  311,
+	"3COM":       429,
+	"ASCEND":     529,
+	"BAY":        1584,
+	"LUCENT":     1751,
+	"REDBACK":    2352,
+	"APTIS":      2634,
+	"MASTERSOFT": 5401,
+	"QUINTUM":    6618,
+	"HUAWEI":     2011,
+	"JUNIPER":    4874,
+	"ZTE":        3902,
+	"ALCATEL":    6527,
 }
 
 //定义普通厂商属性列表 AttV
-var list_attv_id map[VendorId]map[AttV]Const_definition = map[VendorId]map[AttV]Const_definition{
+var list_AttV_id map[VendorId]map[AttV]Const_definition = map[VendorId]map[AttV]Const_definition{
 	VENDOR_ACC: {
 		1:  {"ACC_REASON_CODE", "INTEGER"},
 		2:  {"ACC_CCP_OPTION", "INTEGER"},
@@ -1351,7 +1387,7 @@ var list_attv_id map[VendorId]map[AttV]Const_definition = map[VendorId]map[AttV]
 }
 
 //定义普通厂商属性列表 按vendorId、vendorAttName索引
-var list_attv_name map[VendorId]map[string]AttV = map[VendorId]map[string]AttV{
+var list_AttV_name map[VendorId]map[string]AttV = map[VendorId]map[string]AttV{
 	VENDOR_ACC: {
 		"ACC_REASON_CODE":           1,
 		"ACC_CCP_OPTION":            2,
@@ -1967,70 +2003,8 @@ var list_attv_name map[VendorId]map[string]AttV = map[VendorId]map[string]AttV{
 	},
 }
 
-//
-func getAttVstring(vid VendorId, vaid AttV) string {
-	v, ok := list_attv_id[vid][vaid]
-	if ok {
-		return vid.String() + ":" + v.Name + "(" + vaid.String() + ")"
-	}
-	return vid.String() + ":UNKNOWN_ATTRIBUTE(" + vaid.String() + ")"
-}
-
-//
-func getAttVtypestring(vid VendorId, vaid AttV) string {
-	v, ok := list_attv_id[vid][vaid]
-	if ok {
-		return v.Type
-	}
-	return ""
-}
-
-//
-func isvalidAttV(vid VendorId, vaid AttV) bool {
-	_, ok := list_attv_id[vid][vaid]
-	if ok {
-		return true
-	}
-	return false
-}
-
-//getAttV直接通过字符串获取  不推荐
-func getAttV(s string) (VendorId, AttV, error) {
-	//s = strpredone(s)
-	for vid, v := range list_attv_name {
-		for vaname, vaid := range v {
-			if vaname == s {
-				return vid, vaid, nil
-			}
-		}
-	}
-	return VENDOR_NO, AttV(0), ERR_ATT_UNK
-}
-
-//
-func GetAttV(s string) (VendorId, AttV, error) {
-	s = strpredone(s)
-	var vid VendorId
-	var err error
-	ss := strings.Split(s, ":")
-	if len(ss) == 1 {
-		return getAttV(ss[0])
-	}
-	if len(ss) == 2 {
-		vid, err = GetVendorId(ss[0])
-		if err != nil {
-			return VENDOR_NO, AttV(0), err
-		}
-		v, ok := list_attv_name[vid][ss[1]]
-		if ok {
-			return vid, v, nil
-		}
-	}
-	return VENDOR_NO, AttV(0), ERR_ATT_UNK
-}
-
-//定义普通厂商属性列表 AttVId
-var list_attv4_id map[VendorId]map[AttV4]Const_definition = map[VendorId]map[AttV4]Const_definition{
+//定义普通厂商属性列表 AttIdV
+var list_AttV4_id map[VendorId]map[AttV4]Const_definition = map[VendorId]map[AttV4]Const_definition{
 	VENDOR_3COM: {
 		72:    {"3COM_DTE_DATA_IDLE_TIMOUT", "INTEGER"},
 		94:    {"3COM_DEFAULT_DTE_DATA_RATE", "INTEGER"},
@@ -2287,7 +2261,7 @@ var list_attv4_id map[VendorId]map[AttV4]Const_definition = map[VendorId]map[Att
 }
 
 //定义普通厂商属性列表 按vendorId、vendorAttName索引
-var list_attv4_name map[VendorId]map[string]AttV4 = map[VendorId]map[string]AttV4{
+var list_AttV4_name map[VendorId]map[string]AttV4 = map[VendorId]map[string]AttV4{
 	VENDOR_3COM: {
 		"3COM_DTE_DATA_IDLE_TIMOUT":             72,
 		"3COM_DEFAULT_DTE_DATA_RATE":            94,
@@ -2543,109 +2517,62 @@ var list_attv4_name map[VendorId]map[string]AttV4 = map[VendorId]map[string]AttV
 	},
 }
 
-//
-func getAttV4string(vid VendorId, vaid AttV4) string {
-	v, ok := list_attv4_id[vid][vaid]
-	if ok {
-		return vid.String() + ":" + v.Name + "(" + vaid.String() + ")"
+//对外提供重载vendor的方法 已存在的不允许重载
+func Customer_SetVendorList(vendorid int, name string, typ string) error {
+	id := VendorId(vendorid)
+	if id == VENDOR_NO {
+		return ERR_SET_VENDOR //不允许重载vendorid为0的
 	}
-	return vid.String() + ":UNKNOWN_ATTRIBUTE(" + vaid.String() + ")"
+	if _, ok := list_vendor_id[id]; ok { //若存在，则不允许重载
+		return ERR_SET_VENDOR
+	}
+	name = stringfix(name)
+	typ = stringfix(typ)
+	if typ != "TYPE4" {
+		typ = "IETF"
+	}
+	var c Const_definition = Const_definition{name, typ}
+	list_vendor_id[id] = c
+	list_vendor_name[name] = id
+	return nil
 }
 
-//
-func getAttV4typestring(vid VendorId, vaid AttV4) string {
-	v, ok := list_attv4_id[vid][vaid]
-	if ok {
-		return v.Type
-	}
-	return ""
+//返回已加载的vendorid列表
+func ListVender() map[VendorId]Const_definition {
+	return list_vendor_id
 }
-
-//
-func isvalidAttV4(vid VendorId, vaid AttV4) bool {
-	_, ok := list_attv4_id[vid][vaid]
-	if ok {
-		return true
-	}
-	return false
-}
-
-//直接通过字符串获取  不推荐
-func getAttV4(s string) (VendorId, AttV4, error) {
-	//s = strpredone(s)
-	for vid, v := range list_attv4_name {
-		for vaname, vaid := range v {
-			if vaname == s {
-				return vid, vaid, nil
-			}
-		}
-	}
-	return VENDOR_NO, AttV4(0), ERR_ATT_UNK
-}
-
-//
-func GetAttV4(s string) (VendorId, AttV4, error) {
-	s = strpredone(s)
-	var vid VendorId
-	var err error
-	ss := strings.Split(s, ":")
-	if len(ss) == 1 {
-		return getAttV4(ss[0])
-	}
-	if len(ss) == 2 {
-		vid, err = GetVendorId(ss[0])
-		if err != nil {
-			return VENDOR_NO, AttV4(0), err
-		}
-		v, ok := list_attv4_name[vid][ss[1]]
-		if ok {
-			return vid, v, nil
-		}
-	}
-	return VENDOR_NO, AttV4(0), ERR_ATT_UNK
-}
-
-//
-
-//
 
 //厂商Att列表的重载
 func Customer_SetVendorAttList(vendorname string, vaid_in int, vaname string, vatype string) error {
-	vendorname = strpredone(vendorname)
 	vid, err := GetVendorId(vendorname)
 	if err != nil {
 		return err
 	}
-	vatype = strpredone(vatype)
-	if !isvalidAttributeType(vatype) {
+	vatype = stringfix(vatype)
+	if !isValidAttributeType(vatype) {
 		return ERR_ATT_TYPE
 	}
-	vaname = strpredone(vaname)
+	vaname = stringfix(vaname)
+	var c Const_definition = Const_definition{vaname, vatype}
 	if vid.Typestring() == "IETF" {
 		vaid := AttV(vaid_in)
-		_, ok := list_attv_id[vid][vaid]
+		_, ok := list_AttV_id[vid][vaid]
 		if ok {
 			return ERR_ATT_SET
 		} else {
-			var c Const_definition
-			c.Name = vaname
-			c.Type = vatype
-			list_attv_id[vid][vaid] = c
-			list_attv_name[vid][vaname] = vaid
+			list_AttV_id[vid][vaid] = c
+			list_AttV_name[vid][vaname] = vaid
 		}
 		return nil
 	}
 	if vid.Typestring() == "TYPE4" {
 		vaid4 := AttV4(vaid_in)
-		_, ok := list_attv4_id[vid][vaid4]
+		_, ok := list_AttV4_id[vid][vaid4]
 		if ok {
 			return ERR_ATT_SET
 		} else {
-			var c Const_definition
-			c.Name = vaname
-			c.Type = vatype
-			list_attv4_id[vid][vaid4] = c
-			list_attv4_name[vid][vaname] = vaid4
+			list_AttV4_id[vid][vaid4] = c
+			list_AttV4_name[vid][vaname] = vaid4
 		}
 		return nil
 	}
@@ -2654,10 +2581,10 @@ func Customer_SetVendorAttList(vendorname string, vaid_in int, vaname string, va
 
 //
 func ListAttV() map[VendorId]map[AttV]Const_definition {
-	return list_attv_id
+	return list_AttV_id
 }
 
 //
 func ListAttV4() map[VendorId]map[AttV4]Const_definition {
-	return list_attv4_id
+	return list_AttV4_id
 }

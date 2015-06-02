@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	//"strings"
-	"encoding/binary"
 	"strconv"
 )
 
@@ -38,14 +37,14 @@ func (i R_Code) String() (s string) {
 	return ERR_CODE_WRONG.Error() + ":(" + strconv.Itoa(int(i)) + ")"
 }
 
-func (r *Radius) getRadiusCodeFbuff(buf *bytes.Buffer) error {
+func (r *R_Code) getCodeFromBuff(buf *bytes.Buffer) error {
 	b, err := buf.ReadByte()
 	if err != nil {
 		return ERR_RADIUS_FMT
 	}
 	i := R_Code(b)
 	if i < 6 || (i >= 11 && i <= 13) || i == 255 {
-		r.R_Code = i
+		*r = i
 		return nil
 	}
 	return ERR_CODE_WRONG
@@ -57,13 +56,13 @@ func (i R_Id) String() string {
 	return fmt.Sprintf("Id(%d)", i)
 }
 
-func (r *Radius) getRadiusIdFbuff(buf *bytes.Buffer) error {
+func (r *R_Id) getIdFromBuff(buf *bytes.Buffer) error {
 	b, err := buf.ReadByte()
 	if err != nil {
 		return ERR_RADIUS_FMT
 	}
 	i := R_Id(b)
-	r.R_Id = i
+	*r = i
 	return nil
 }
 
@@ -73,14 +72,14 @@ func (l R_Length) String() string {
 	return fmt.Sprintf("Length(%d)", l)
 }
 
-func (l R_Length) IsValidRLenth() bool {
-	if l >= radiusLength_MIN && l <= radiusLength_MAX {
+func (r R_Length) isValidLenth() bool {
+	if r >= radiusLength_MIN || r <= radiusLength_MAX {
 		return true
 	}
 	return false
 }
 
-func (r *Radius) checkRadiusLength(buf *bytes.Buffer) bool {
+func (r *Radius) checkRadiusLengthWithBuff(buf *bytes.Buffer) bool {
 	l := R_Length(buf.Len())
 	if r.R_Length == l {
 		return true
@@ -88,7 +87,7 @@ func (r *Radius) checkRadiusLength(buf *bytes.Buffer) bool {
 	return false
 }
 
-func (r *Radius) getRadiusLenFbuff(buf *bytes.Buffer) error {
+func (r *R_Length) getLenFromBuff(buf *bytes.Buffer) error {
 	var b1, b2 byte
 	var err1, err2 error
 	b1, err1 = buf.ReadByte()
@@ -97,8 +96,8 @@ func (r *Radius) getRadiusLenFbuff(buf *bytes.Buffer) error {
 		return ERR_LEN_INVALID
 	}
 	l := R_Length(b1<<8) + R_Length(b2)
-	if l.IsValidRLenth() {
-		r.R_Length = l
+	if l.isValidLenth() {
+		*r = l
 		return nil
 	}
 	return ERR_LEN_INVALID
@@ -107,15 +106,15 @@ func (r *Radius) getRadiusLenFbuff(buf *bytes.Buffer) error {
 //methods of R_Authenticator
 
 func (a R_Authenticator) String() string {
-	return fmt.Sprintf("Authenticator(%v)", []byte(a))
+	return fmt.Sprintf("Authenticator %v", []byte(a))
 }
 
-func (r *Radius) getRadiusAuthenticatorFbuff(buf *bytes.Buffer) error {
+func (r *R_Authenticator) getAuthenticatorFromBuff(buf *bytes.Buffer) error {
 	b := buf.Next(Radius_Authenticator_LEN)
 	if len(b) != Radius_Authenticator_LEN {
 		return ERR_AUTHENTICATOR_INVALID
 	}
-	r.R_Authenticator = b
+	*r = b
 	return nil
 }
 
@@ -124,80 +123,59 @@ func (r *Radius) getRadiusAuthenticatorFbuff(buf *bytes.Buffer) error {
 //methosd of Attributes maps of Id or Name
 
 //methods of Attributes
-func (r *Radius) getRadiusAttsFbuff(buf *bytes.Buffer) error {
-
+func (r *Radius) getAttsFromBuff(buf *bytes.Buffer) error {
+	//循环读取buff，直至结束或错误
 	for {
-		var b1, b2, b3, b4 byte
+		var blen byte
 		var err error
 		var tmplen int
-		b1, err = buf.ReadByte()
-		if err != nil {
-			if err == io.EOF {
-				break
-			}
-			return ERR_ATT_FMT
-		}
-		b2, err = buf.ReadByte()
-		if err != nil {
-			if err == io.EOF {
-				break
-			}
-			return ERR_ATT_FMT
-		}
-		tmplen = int(b2) - 2
-		if int(b1) != 26 {
-			vid := AttId(b1)
-			vtype := vid.Typestring()
+		var tmplen_v int
+		var aid AttId
 
+		aid, err = readAttId(buf)
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+			return ERR_ATT_FMT
+		}
+
+		blen, err = buf.ReadByte()
+		if err != nil {
+			return ERR_ATT_FMT
+		}
+
+		tmplen = int(blen) - 2
+		if aid != ATTID_VENDOR_SPECIFIC {
+			vtype := aid.Typestring()
 			v, err := NewAttributeValueFromBuff(vtype, bytes.NewBuffer(buf.Next(tmplen)))
 			if err != nil {
 				return err
 			}
-			r.AttributeList.AddAttr(vid, v)
+			r.AttributeList.AddAttr(aid, v)
 		} else {
-			var vid VendorId
-			binary.Read(bytes.NewBuffer(buf.Next(4)), binary.BigEndian, &vid)
-			if !vid.IsvalidVendor() {
-				return ERR_VENDOR_INVALID
+			aidv, err1 := readAttIdV(buf)
+			if err1 != nil {
+				return err1
 			}
-			if vid.Typestring() == "IETF" {
-				b3, err = buf.ReadByte()
+			if aidv.VendorId.Typestring() == "IETF" {
+				blen, err = buf.ReadByte()
 				if err != nil {
-					if err == io.EOF {
-						break
-					}
 					return ERR_ATT_FMT
 				}
-				vaid := AttV(b3)
-				va := AttVId{vid, vaid}
-
-				b4, err = buf.ReadByte()
-				if err != nil {
-					if err == io.EOF {
-						break
-					}
+				tmplen_v = int(blen) - 2
+				if tmplen_v != tmplen-6 {
 					return ERR_ATT_FMT
 				}
-
-				la := int(b4 - 2)
-				v, err := NewAttributeValueFromBuff(va.Typestring(), bytes.NewBuffer(buf.Next(la)))
-				if err != nil {
-					return err
-				}
-				r.AttributeList.AddAttr(va, v)
-
 			}
-			if vid.Typestring() == "TYPE4" {
-				var vaid AttV4
-				binary.Read(bytes.NewBuffer(buf.Next(4)), binary.BigEndian, &vaid)
-				va := AttV4Id{vid, vaid}
-
-				v, err := NewAttributeValueFromBuff(va.Typestring(), bytes.NewBuffer(buf.Next(tmplen-8)))
-				if err != nil {
-					return err
-				}
-				r.AttributeList.AddAttr(va, v)
+			if aidv.VendorId.Typestring() == "TYPE4" {
+				tmplen_v = tmplen - 8
 			}
+			v, err := NewAttributeValueFromBuff(aidv.Typestring(), bytes.NewBuffer(buf.Next(tmplen_v)))
+			if err != nil {
+				return err
+			}
+			r.AttributeList.AddAttr(aidv, v)
 		}
 	}
 	return nil

@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-func strpredone(s string) string {
+func stringfix(s string) string {
 	ss := strings.ToUpper(s)
 	ss = strings.TrimSpace(ss)
 	return ss

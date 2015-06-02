@@ -2036,7 +2036,7 @@ var list_attribute_meaning map[string]map[uint32]string = map[string]map[uint32]
 }
 
 func AttributeMeanig(attributename string, i int) string {
-	//attributename = strpredone(attributename)
+	//attributename = stringfix(attributename)
 	var_i := uint32(i)
 	ss, ok := list_attribute_meaning[attributename][var_i]
 	if ok {
