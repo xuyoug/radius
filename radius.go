@@ -8,13 +8,7 @@ package radius
 
 //定义radius的处理方法
 
-import (
-	"bytes"
-	"encoding/binary"
-	"errors"
-	//"fmt"
-	//"net"
-)
+import ()
 
 // func GetRadius(conn *net.UDPConn) (*Radius, error) {
 // 	var inbytes [4096]byte
@@ -41,67 +35,4 @@ func NewRadius() *Radius {
 	r := new(Radius)
 	r.AttributeList.attributes = make([]Attribute, 0)
 	return r
-}
-
-func (r *Radius) FillFromBuf(buf *bytes.Buffer) error {
-
-	err := r.getCodeFromBuff(buf)
-	if err != nil {
-		return errors.New("Format wrong on R_code")
-	}
-
-	err = r.getIdFromBuff(buf)
-	if err != nil {
-		return errors.New("Format wrong on R_Id")
-	}
-
-	err = r.getLenFromBuff(buf)
-	if err != nil {
-		return errors.New("Format wrong on R_Length")
-	}
-
-	err = r.getAuthenticatorFromBuff(buf)
-	if err != nil {
-		return errors.New("Format wrong on R_Length")
-	}
-
-	err = r.getAttsFromBuff(buf)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-//
-func (r *Radius) WriteToBuff() *bytes.Buffer {
-	buf := bytes.NewBuffer([]byte{})
-	buf.WriteByte(byte(r.R_Code))
-	buf.WriteByte(byte(r.R_Id))
-	binary.Write(buf, binary.BigEndian, r.R_Length)
-	buf.Write([]byte(r.R_Authenticator))
-	for _, v := range r.AttributeList.attributes {
-		v.writeBuff(buf)
-	}
-	return buf
-}
-
-//
-func (r *Radius) GetLength() R_Length {
-	var l R_Length
-	l = 20
-	for _, v := range r.AttributeList.attributes {
-		switch v.AttributeId.(type) {
-		case AttId:
-			l += R_Length(v.AttributeValue.Len() + 2)
-		case AttIdV:
-			if v.AttributeId.Typestring() == "IETF" {
-				l += R_Length(v.AttributeValue.Len() + 8)
-			}
-			if v.AttributeId.Typestring() == "TYPE4" {
-				l += R_Length(v.AttributeValue.Len() + 8)
-			}
-		}
-	}
-	return l
 }

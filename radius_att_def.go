@@ -8,10 +8,10 @@ import (
 	"strings"
 )
 
-//定义标准属性列表
+//AttId定义标准属性Id
 type AttId uint8
 
-//String返回AttId其名字
+//String方法返回AttId其名字
 func (a AttId) String() string {
 	s, ok := list_attributestand_id[a]
 	if ok {
@@ -20,8 +20,8 @@ func (a AttId) String() string {
 	return ""
 }
 
-//Typestring返回AttId其类型
-func (a AttId) Typestring() string {
+//ValueTypestringTypestring方法返回其值类型
+func (a AttId) ValueTypestring() string {
 	s, ok := list_attributestand_id[a]
 	if ok {
 		return s.Type
@@ -29,13 +29,14 @@ func (a AttId) Typestring() string {
 	return ""
 }
 
-//Typestring返回AttId其类型
+//Typestring方法返回AttId是否有效
 func (a AttId) IsValid() bool {
 	_, ok := list_attributestand_id[a]
 	return ok
 }
 
-func (a AttId) Write(buf *bytes.Buffer) error {
+//Write方法将AttId自己写入buffer
+func (a AttId) writeAttributeId(buf *bytes.Buffer) error {
 	err := buf.WriteByte(byte(a))
 	if err != nil {
 		return err
@@ -43,6 +44,7 @@ func (a AttId) Write(buf *bytes.Buffer) error {
 	return nil
 }
 
+//readAttId提供从buffer读取AttId的方法
 func readAttId(buf *bytes.Buffer) (AttId, error) {
 	b, err := buf.ReadByte()
 	if err != nil {
@@ -51,7 +53,7 @@ func readAttId(buf *bytes.Buffer) (AttId, error) {
 	return AttId(b), nil
 }
 
-//根据名字返回AttId
+//GetAttId提供根据名字返回AttId的方法
 func GetAttId(s string) (AttId, error) {
 	s = stringfix(s)
 	a, ok := list_attributestand_name[s]
@@ -61,101 +63,89 @@ func GetAttId(s string) (AttId, error) {
 	return ATT_NO, ERR_ATT_UNK
 }
 
-//定义厂商属性
-
-//定义radius的attribute
-type AttV uint8
-type AttV4 uint32
-
-func (a AttV) bytes() []byte {
-	bs := make([]byte, 1)
-	bs[0] = byte(a)
-	return bs
-}
-
-func (a AttV4) bytes() []byte {
-	// bs := make([]byte,4)
-	// for i:=0;i<4;i++{
-	// 	tmp := a
-	// 	tmp<<i*8
-	// 	tmp>>(3-i)*8
-	// 	b := byte(tmp)
-	// 	bs[i]=b
-	// }
-	// return bs
-	buf := bytes.NewBuffer([]byte{})
-	binary.Write(buf, binary.BigEndian, a)
-	return buf.Bytes()
-}
-
-type AttVS interface {
-	bytes() []byte
-}
-
-//厂商属性定义
+//AttIdV定义厂商属性
 type AttIdV struct {
 	VendorId
-	AttVS
+	Id int
 }
 
-var ATTIDV_ERR AttIdV = AttIdV{VENDOR_NO, nil}
+//ATTIDV_ERR定义错误的厂商属性
+var ATTIDV_ERR AttIdV = AttIdV{VENDOR_NO, 0}
 
+//String方法返回AttIdV的字符串表达形式
 func (a AttIdV) String() string {
-	if a.VendorId.Typestring() == "IETF" {
-		v, ok := list_AttV_id[a.VendorId][a.AttVS.(AttV)]
-		if ok {
-			return a.VendorId.String() + ":" + v.Name + "(" + strconv.Itoa(int(a.AttVS.(AttV))) + ")"
-		}
-		return a.VendorId.String() + ":UNKNOWN_ATTRIBUTE(" + strconv.Itoa(int(a.AttVS.(AttV))) + ")"
+	v, ok := list_attV_id[a.VendorId][a.Id]
+	if ok {
+		return a.VendorId.String() + ":" + v.Name + "(" + strconv.Itoa(a.Id) + ")"
 	}
-	if a.VendorId.Typestring() == "TYPE4" {
-		v, ok := list_AttV4_id[a.VendorId][a.AttVS.(AttV4)]
-		if ok {
-			return a.VendorId.String() + ":" + v.Name + "(" + strconv.Itoa(int(a.AttVS.(AttV4))) + ")"
-		}
-		return a.VendorId.String() + ":UNKNOWN_ATTRIBUTE(" + strconv.Itoa(int(a.AttVS.(AttV4))) + ")"
+	return a.VendorId.String() + ":UNKNOWN_ATTRIBUTE(" + strconv.Itoa(a.Id) + ")"
+}
+
+//ValueTypestringTypestring方法返回其值类型
+func (a AttIdV) ValueTypestring() string {
+	v, ok := list_attV_id[a.VendorId][a.Id]
+	if ok {
+		return v.Type
 	}
 	return ""
 }
 
-func (a AttIdV) Typestring() string {
-	if a.VendorId.Typestring() == "IETF" {
-		v, ok := list_AttV_id[a.VendorId][a.AttVS.(AttV)]
-		if ok {
-			return v.Type
-		}
-	}
-	if a.VendorId.Typestring() == "TYPE4" {
-		v, ok := list_AttV4_id[a.VendorId][a.AttVS.(AttV4)]
-		if ok {
-			return v.Type
-		}
-	}
-	return ""
-}
-
+//IsValid方法返回其是否有效
 func (a AttIdV) IsValid() bool {
-	if a.VendorId.Typestring() == "IETF" {
-		_, ok := list_AttV_id[a.VendorId][a.AttVS.(AttV)]
-		return ok
-	}
-	if a.VendorId.Typestring() == "TYPE4" {
-		_, ok := list_AttV4_id[a.VendorId][a.AttVS.(AttV4)]
-		return ok
-	}
-	return false
+	_, ok := list_attV_id[a.VendorId][a.Id]
+	return ok
 }
 
-//getAttV直接通过字符串获取  不推荐
-func getAttV(s string) (AttIdV, error) {
-	for vid, v := range list_AttV_name {
-		for vaname, vaid := range v {
-			if vaname == s {
-				return AttIdV{vid, vaid}, nil
-			}
+//readAttIdV提供从buffer中读取AttIdV的方法
+//发生错误则返回
+func readAttIdV(buf *bytes.Buffer) (AttIdV, error) {
+	var vid VendorId
+	binary.Read(bytes.NewBuffer(buf.Next(4)), binary.BigEndian, &vid)
+	if !vid.IsValidVendor() { //不是有效vendor则返回错误
+		return ATTIDV_ERR, ERR_VENDOR_INVALID
+	}
+	vtype := vid.VendorTypestring()
+	var vaid int
+	if vtype == "IETF" {
+		b, err := buf.ReadByte()
+		if err != nil {
+			return ATTIDV_ERR, ERR_RADIUS_FMT
+		}
+		vaid = int(b)
+	}
+	if vtype == "TYPE4" {
+		var tmp uint32
+		binary.Read(bytes.NewBuffer(buf.Next(4)), binary.BigEndian, &tmp)
+		vaid = int(tmp)
+	}
+	return AttIdV{vid, vaid}, nil
+}
+
+//WriteAttributeId方法将AttIdV自己写buffer
+func (a AttIdV) writeAttributeId(buf *bytes.Buffer) error {
+	err := binary.Write(buf, binary.BigEndian, a.VendorId)
+	if err != nil {
+		return err
+	}
+	typ := a.VendorTypestring()
+	if typ == "IETF" {
+		err = binary.Write(buf, binary.BigEndian, uint8(a.Id))
+		if err != nil {
+			return err
 		}
 	}
-	for vid, v := range list_AttV4_name {
+	if typ == "TYPE4" {
+		err = binary.Write(buf, binary.BigEndian, uint32(a.Id))
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+//getattV提供直接通过字符串获取厂商属性定义的方法
+func getattidv(s string) (AttIdV, error) {
+	for vid, v := range list_attV_name {
 		for vaname, vaid := range v {
 			if vaname == s {
 				return AttIdV{vid, vaid}, nil
@@ -165,79 +155,42 @@ func getAttV(s string) (AttIdV, error) {
 	return ATTIDV_ERR, ERR_ATT_UNK
 }
 
-//
-func GetAttV(s string) (AttIdV, error) {
+//GetAttIdV提供根据字符串查找具体厂商属性的方法
+//字符串以":"分隔
+//":"之前为vendor名称，之后为属性名称
+//若只有属性名称，则进行全部查找
+func GetAttIdV(s string) (AttIdV, error) {
 	s = stringfix(s)
 	var vid VendorId
 	var err error
 	ss := strings.Split(s, ":")
 	if len(ss) == 1 {
-		return getAttV(ss[0])
+		return getattidv(ss[0])
 	}
 	if len(ss) == 2 {
 		vid, err = GetVendorId(ss[0])
 		if err != nil {
 			return ATTIDV_ERR, err
 		}
-		//根据vendorid判断vaid的类型
-		switch vid.Typestring() {
-		case "IETF":
-			v, ok := list_AttV_name[vid][ss[1]]
-			if ok {
-				return AttIdV{vid, v}, nil
-			}
-		case "TYPE4":
-			v, ok := list_AttV4_name[vid][ss[1]]
-			if ok {
-				return AttIdV{vid, v}, nil
-			}
+		v, ok := list_attV_name[vid][ss[1]]
+		if ok {
+			return AttIdV{vid, v}, nil
 		}
 	}
 	return ATTIDV_ERR, ERR_ATT_UNK
 }
 
-//
-func readAttIdV(buf *bytes.Buffer) (AttIdV, error) {
-	var vid VendorId
-	binary.Read(bytes.NewBuffer(buf.Next(4)), binary.BigEndian, &vid)
-	if !vid.IsValidVendor() {
-		return ATTIDV_ERR, ERR_VENDOR_INVALID
-	}
-	var attidvs AttIdV
-	vtype := vid.Typestring()
-	if vtype == "IETF" {
-		var vaid AttV
-		binary.Read(bytes.NewBuffer(buf.Next(1)), binary.BigEndian, &vaid)
-		attidvs = AttIdV{vid, vaid}
-	}
-	if vtype == "TYPE4" {
-		var vaid AttV4
-		binary.Read(bytes.NewBuffer(buf.Next(4)), binary.BigEndian, &vaid)
-		attidvs = AttIdV{vid, vaid}
-	}
-	return attidvs, nil
-}
-
-func (a AttIdV) Write(buf *bytes.Buffer) error {
-	binary.Write(buf, binary.BigEndian, a.VendorId)
-	_, err := buf.Write(a.AttVS.bytes())
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-//定义属性标示符
+//定义属性标示符接口
 type AttributeId interface {
-	Write(buf *bytes.Buffer) error
+	writeAttributeId(buf *bytes.Buffer) error
 	String() string
-	Typestring() string
+	ValueTypestring() string
 	IsValid() bool
 }
 
 //NewAttributeId is a fucking and terrible thing!Fuck it!
 //这种方式获取 时间在0.003ms-0.01ms之间
-func NewAttributeId(in ...interface{}) (interface{}, error) {
+func NewAttributeId(in ...interface{}) (AttributeId, error) {
 	var vid VendorId
 	var aid AttId
 	var aidv AttIdV
@@ -248,51 +201,51 @@ func NewAttributeId(in ...interface{}) (interface{}, error) {
 	case 1:
 		switch in[0].(type) {
 		case int:
-			if in[0].(int) != 26 || in[0].(int) >= 255 {
+			if in[0].(int) != 26 || in[0].(int) < 255 {
 				return AttId(in[0].(int)), nil
 			}
-			return nil, ERR_ATT_SET
+			return ATT_NO, ERR_ATT_UNK
 		case string:
 			aid, err = GetAttId(in[0].(string))
 			if err == nil {
 				return aid, nil
 			}
-			aidv, err = GetAttV(in[0].(string))
+			aidv, err = GetAttIdV(in[0].(string))
 			if err == nil {
 				return aidv, nil
 			}
-			return nil, ERR_ATT_SET
+			return ATT_NO, ERR_ATT_UNK
 		case AttId:
 			aid = in[0].(AttId)
 			if aid == ATTID_VENDOR_SPECIFIC {
-				return nil, ERR_ATT_SET
+				return ATT_NO, ERR_ATT_SET
 			}
 			return aid, nil
 		default:
-			return nil, ERR_ATT_SET
+			return ATT_NO, ERR_ATT_SET
 		}
 	case 2:
 		switch in[0].(type) {
 		case int:
 			vid = VendorId(in[0].(int))
 			if !vid.IsValidVendor() {
-				return nil, ERR_ATT_SET
+				return ATT_NO, ERR_ATT_SET
 			}
 			switch in[1].(type) {
 			case int:
-				aidv, err = vid.getAttById(in[1].(int))
+				aidv, err = vid.GetAttById(in[1].(int))
 				if err == nil {
 					return aidv, nil
 				}
-				return nil, err
+				return ATT_NO, err
 			case string:
-				aidv, err = vid.getAttByName(in[1].(string))
+				aidv, err = vid.GetAttByName(in[1].(string))
 				if err == nil {
 					return aidv, nil
 				}
-				return nil, err
+				return ATT_NO, err
 			default:
-				return nil, ERR_ATT_SET
+				return ATT_NO, ERR_ATT_SET
 			}
 		case VendorId:
 			vid = in[0].(VendorId)
@@ -301,19 +254,19 @@ func NewAttributeId(in ...interface{}) (interface{}, error) {
 			}
 			switch in[1].(type) {
 			case int:
-				aidv, err = vid.getAttById(in[1].(int))
+				aidv, err = vid.GetAttById(in[1].(int))
 				if err == nil {
 					return aidv, nil
 				}
-				return nil, err
+				return ATT_NO, err
 			case string:
-				aidv, err = vid.getAttByName(in[1].(string))
+				aidv, err = vid.GetAttByName(in[1].(string))
 				if err == nil {
 					return aidv, nil
 				}
-				return nil, err
+				return ATT_NO, err
 			default:
-				return nil, ERR_ATT_SET
+				return ATT_NO, ERR_ATT_SET
 			}
 		case string:
 			vid, err = GetVendorId(in[0].(string))
@@ -322,19 +275,19 @@ func NewAttributeId(in ...interface{}) (interface{}, error) {
 			}
 			switch in[1].(type) {
 			case int:
-				aidv, err = vid.getAttById(in[1].(int))
+				aidv, err = vid.GetAttById(in[1].(int))
 				if err == nil {
 					return aidv, nil
 				}
-				return nil, err
+				return ATT_NO, err
 			case string:
-				aidv, err = vid.getAttByName(in[1].(string))
+				aidv, err = vid.GetAttByName(in[1].(string))
 				if err == nil {
 					return aidv, nil
 				}
-				return nil, err
+				return ATT_NO, err
 			default:
-				return nil, ERR_ATT_SET
+				return ATT_NO, ERR_ATT_SET
 			}
 		default:
 			return nil, ERR_ATT_SET
@@ -345,34 +298,90 @@ func NewAttributeId(in ...interface{}) (interface{}, error) {
 	return nil, ERR_ATT_SET
 }
 
-//定义属性的长度
-type attributeLen uint8
-
-//
-
+//Attribute定义一个完整的属性，包含属性描述及属性值
 type Attribute struct {
 	AttributeId
 	AttributeValue
 }
 
-func (v *Attribute) writebuf(buf *bytes.Buffer) {
+//ATTIDV_ERR定义错误的厂商属性
+var ATTRIBUTE_ERR Attribute = Attribute{ATT_NO, INTEGER(0)}
+
+//
+func readAttribute(buf *bytes.Buffer) (Attribute, error) {
+	var attid AttId
+	var length, lengthv int
+	var b byte
+	var err error
+	var typ, vtyp string
+	attid, err = readAttId(buf)
+	if err != nil {
+		return ATTRIBUTE_ERR, err
+	}
+	b, err = buf.ReadByte()
+	if err != nil {
+		return ATTRIBUTE_ERR, ERR_ATT_FMT
+	}
+	length = int(b)
+	if attid != ATTID_VENDOR_SPECIFIC {
+		typ = attid.ValueTypestring()
+		v, err1 := newAttributeValueFromBuff(typ, length-2, buf)
+		if err1 != nil {
+			return ATTRIBUTE_ERR, err1
+		}
+		return Attribute{attid, v}, nil
+	} else {
+		attidv, err1 := readAttIdV(buf)
+		if err1 != nil {
+			return ATTRIBUTE_ERR, err1
+		}
+		vtyp = attidv.VendorTypestring()
+		typ = attidv.ValueTypestring()
+		if vtyp == "IETF" {
+			b, err = buf.ReadByte()
+			if err != nil {
+				return ATTRIBUTE_ERR, ERR_ATT_FMT
+			}
+			lengthv = int(b)
+			if lengthv != length-6 {
+				return ATTRIBUTE_ERR, ERR_ATT_FMT
+			}
+			v, err1 := newAttributeValueFromBuff(typ, lengthv-2, buf)
+			if err1 != nil {
+				return ATTRIBUTE_ERR, err1
+			}
+			return Attribute{attidv, v}, nil
+		}
+		if vtyp == "TYPE4" {
+			v, err1 := newAttributeValueFromBuff(typ, length-10, buf)
+			if err1 != nil {
+				return ATTRIBUTE_ERR, err1
+			}
+			return Attribute{attidv, v}, nil
+		}
+	}
+	return ATTRIBUTE_ERR, ERR_ATT_FMT
+}
+
+//writebuf方法将属性写buffer
+func (v *Attribute) writeBuffer(buf *bytes.Buffer) {
 	switch v.AttributeId.(type) {
 	case AttId:
-		v.AttributeId.Write(buf)
-		buf.WriteByte(byte(v.AttributeValue.Len() + 2))
-		v.AttributeValue.writeBuff(buf)
+		v.AttributeId.writeAttributeId(buf)
+		buf.WriteByte(byte(uint8(v.AttributeValue.ValueLen() + 2)))
+		v.AttributeValue.writeBuffer(buf)
 	case AttIdV:
 		buf.WriteByte(byte(ATTID_VENDOR_SPECIFIC))
-		if v.AttributeId.Typestring() == "IETF" {
-			buf.WriteByte(byte(v.AttributeValue.Len() + 8))
-			v.AttributeId.Write(buf)
-			buf.WriteByte(byte(v.AttributeValue.Len() + 2))
+		if v.AttributeId.(AttIdV).VendorTypestring() == "IETF" {
+			buf.WriteByte(byte(uint8(v.AttributeValue.ValueLen() + 8)))
+			v.AttributeId.writeAttributeId(buf)
+			buf.WriteByte(byte(uint8(v.AttributeValue.ValueLen() + 2)))
 		}
-		if v.AttributeId.Typestring() == "TYPE4" {
-			buf.WriteByte(byte(v.AttributeValue.Len() + 10))
-			v.AttributeId.Write(buf)
+		if v.AttributeId.(AttIdV).VendorTypestring() == "TYPE4" {
+			buf.WriteByte(byte(uint8(v.AttributeValue.ValueLen() + 10)))
+			v.AttributeId.writeAttributeId(buf)
 		}
-		v.AttributeValue.writeBuff(buf)
+		v.AttributeValue.writeBuffer(buf)
 	}
 }
 
@@ -381,24 +390,22 @@ type AttributeList struct {
 	attributes []Attribute
 }
 
-func (a *AttributeList) AddAttr(r AttributeId, v AttributeValue) {
-	a.attributes = append(a.attributes, Attribute{r, v})
+//
+func (a *AttributeList) AddAttr(r Attribute) {
+	a.attributes = append(a.attributes, r)
 }
 
+//
 func (a *AttributeList) GetAttrsNum() int {
 	return len(a.attributes)
 }
 
-func (a *AttributeList) GetAttrs() ([]AttributeId, int) {
-	list := make([]AttributeId, 0)
-	var numbers int
-	for _, v := range a.attributes {
-		list = append(list, v.AttributeId)
-		numbers += 1
-	}
-	return list, numbers
+//
+func (a *AttributeList) GetAttrs() ([]Attribute, int) {
+	return a.attributes, len(a.attributes)
 }
 
+//
 func (a *AttributeList) GetAttr(r AttributeId) ([]AttributeValue, int) {
 	list := make([]AttributeValue, 0)
 	var numbers int
@@ -411,6 +418,7 @@ func (a *AttributeList) GetAttr(r AttributeId) ([]AttributeValue, int) {
 	return list, numbers
 }
 
+//
 func (a *AttributeList) GetAttrFist(r AttributeId) (AttributeValue, error) {
 	for _, v := range a.attributes {
 		if v.AttributeId == r {
@@ -420,6 +428,7 @@ func (a *AttributeList) GetAttrFist(r AttributeId) (AttributeValue, error) {
 	return INTEGER(0), ERR_ATT_NO
 }
 
+//
 func (a *AttributeList) String() string {
 	var s string
 	s += "Attributes:"

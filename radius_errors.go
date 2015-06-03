@@ -25,12 +25,13 @@ var (
 	ERR_VENDOR_INVALNAME = errors.New("Invalid radius Vendor name")
 
 	//属性错误
-	ERR_ATT_FMT  = errors.New("Attribute format error")
-	ERR_ATT_UNK  = errors.New("Unknow Attribute")
-	ERR_ATT_OTH  = errors.New("Other Attribute error")
-	ERR_ATT_TYPE = errors.New("Error Attribute type")
-	ERR_ATT_SET  = errors.New("Error on set Attribute value")
-	ERR_ATT_NO   = errors.New("No such Attribute")
+	ERR_ATT_FMT   = errors.New("Attribute format error")
+	ERR_ATT_UNK   = errors.New("Unknow Attribute")
+	ERR_ATT_OTH   = errors.New("Other Attribute error")
+	ERR_ATT_TYPE  = errors.New("Error Attribute type")
+	ERR_ATTV_TYPE = errors.New("Error Attribute value type") //
+	ERR_ATT_SET   = errors.New("Error on set Attribute value")
+	ERR_ATT_NO    = errors.New("No such Attribute")
 
 	//其它
 	ERR_OTHER      = errors.New("Other radius error")

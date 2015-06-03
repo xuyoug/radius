@@ -2,9 +2,9 @@ package radius
 
 import (
 	"bytes"
+	"encoding/binary"
+	"errors"
 	"fmt"
-	"io"
-	//"strings"
 	"strconv"
 )
 
@@ -37,7 +37,8 @@ func (i R_Code) String() (s string) {
 	return ERR_CODE_WRONG.Error() + ":(" + strconv.Itoa(int(i)) + ")"
 }
 
-func (r *R_Code) getCodeFromBuff(buf *bytes.Buffer) error {
+//
+func (r *R_Code) readFromBuff(buf *bytes.Buffer) error {
 	b, err := buf.ReadByte()
 	if err != nil {
 		return ERR_RADIUS_FMT
@@ -51,12 +52,12 @@ func (r *R_Code) getCodeFromBuff(buf *bytes.Buffer) error {
 }
 
 //methods of R_Id
-
 func (i R_Id) String() string {
 	return fmt.Sprintf("Id(%d)", i)
 }
 
-func (r *R_Id) getIdFromBuff(buf *bytes.Buffer) error {
+//
+func (r *R_Id) readFromBuff(buf *bytes.Buffer) error {
 	b, err := buf.ReadByte()
 	if err != nil {
 		return ERR_RADIUS_FMT
@@ -67,11 +68,11 @@ func (r *R_Id) getIdFromBuff(buf *bytes.Buffer) error {
 }
 
 //methods of R_Length
-
 func (l R_Length) String() string {
 	return fmt.Sprintf("Length(%d)", l)
 }
 
+//
 func (r R_Length) isValidLenth() bool {
 	if r >= radiusLength_MIN || r <= radiusLength_MAX {
 		return true
@@ -79,7 +80,8 @@ func (r R_Length) isValidLenth() bool {
 	return false
 }
 
-func (r *Radius) checkRadiusLengthWithBuff(buf *bytes.Buffer) bool {
+//
+func (r *Radius) checkLengthWithBuff(buf *bytes.Buffer) bool {
 	l := R_Length(buf.Len())
 	if r.R_Length == l {
 		return true
@@ -87,7 +89,8 @@ func (r *Radius) checkRadiusLengthWithBuff(buf *bytes.Buffer) bool {
 	return false
 }
 
-func (r *R_Length) getLenFromBuff(buf *bytes.Buffer) error {
+//
+func (r *R_Length) readFromBuff(buf *bytes.Buffer) error {
 	var b1, b2 byte
 	var err1, err2 error
 	b1, err1 = buf.ReadByte()
@@ -104,12 +107,12 @@ func (r *R_Length) getLenFromBuff(buf *bytes.Buffer) error {
 }
 
 //methods of R_Authenticator
-
 func (a R_Authenticator) String() string {
 	return fmt.Sprintf("Authenticator %v", []byte(a))
 }
 
-func (r *R_Authenticator) getAuthenticatorFromBuff(buf *bytes.Buffer) error {
+//
+func (r *R_Authenticator) readFromBuff(buf *bytes.Buffer) error {
 	b := buf.Next(Radius_Authenticator_LEN)
 	if len(b) != Radius_Authenticator_LEN {
 		return ERR_AUTHENTICATOR_INVALID
@@ -122,65 +125,6 @@ func (r *R_Authenticator) getAuthenticatorFromBuff(buf *bytes.Buffer) error {
 
 //methosd of Attributes maps of Id or Name
 
-//methods of Attributes
-func (r *Radius) getAttsFromBuff(buf *bytes.Buffer) error {
-	//循环读取buff，直至结束或错误
-	for {
-		var blen byte
-		var err error
-		var tmplen int
-		var tmplen_v int
-		var aid AttId
-
-		aid, err = readAttId(buf)
-		if err != nil {
-			if err == io.EOF {
-				break
-			}
-			return ERR_ATT_FMT
-		}
-
-		blen, err = buf.ReadByte()
-		if err != nil {
-			return ERR_ATT_FMT
-		}
-
-		tmplen = int(blen) - 2
-		if aid != ATTID_VENDOR_SPECIFIC {
-			vtype := aid.Typestring()
-			v, err := NewAttributeValueFromBuff(vtype, tmplen, buf)
-			if err != nil {
-				return err
-			}
-			r.AttributeList.AddAttr(aid, v)
-		} else {
-			aidv, err1 := readAttIdV(buf)
-			if err1 != nil {
-				return err1
-			}
-			if aidv.VendorId.Typestring() == "IETF" {
-				blen, err = buf.ReadByte()
-				if err != nil {
-					return ERR_ATT_FMT
-				}
-				tmplen_v = int(blen) - 2
-				if tmplen_v != tmplen-6 {
-					return ERR_ATT_FMT
-				}
-			}
-			if aidv.VendorId.Typestring() == "TYPE4" {
-				tmplen_v = tmplen - 8
-			}
-			v, err := NewAttributeValueFromBuff(aidv.Typestring(), tmplen_v, buf)
-			if err != nil {
-				return err
-			}
-			r.AttributeList.AddAttr(aidv, v)
-		}
-	}
-	return nil
-}
-
 //methods of Radus
 func (r *Radius) String() string {
 	return r.R_Code.String() + "\n" +
@@ -188,4 +132,68 @@ func (r *Radius) String() string {
 		r.R_Length.String() + "\n" +
 		r.R_Authenticator.String() + "\n" +
 		r.AttributeList.String()
+}
+
+//
+func (r *Radius) ReadFromBuffer(buf *bytes.Buffer) error {
+	err := r.R_Code.readFromBuff(buf)
+	if err != nil {
+		return errors.New("Format wrong on Code")
+	}
+	err = r.R_Id.readFromBuff(buf)
+	if err != nil {
+		return errors.New("Format wrong on Id")
+	}
+
+	err = r.R_Length.readFromBuff(buf)
+	if err != nil {
+		return errors.New("Format wrong on Length")
+	}
+
+	err = r.R_Authenticator.readFromBuff(buf)
+	if err != nil {
+		return errors.New("Format wrong on Authenticator")
+	}
+	for {
+		v, err := readAttribute(buf)
+		if isEOF(err) {
+			break
+		}
+		if err != nil {
+			return err
+		}
+		r.AttributeList.AddAttr(v)
+	}
+	return nil
+}
+
+//
+func (r *Radius) WriteToBuff(buf *bytes.Buffer) {
+	buf.WriteByte(byte(r.R_Code))
+	buf.WriteByte(byte(r.R_Id))
+	binary.Write(buf, binary.BigEndian, r.R_Length)
+	buf.Write([]byte(r.R_Authenticator))
+	for _, v := range r.AttributeList.attributes {
+		v.writeBuffer(buf)
+	}
+}
+
+//
+func (r *Radius) GetLength() R_Length {
+	var l R_Length
+	l = 20
+	for _, v := range r.AttributeList.attributes {
+		switch v.AttributeId.(type) {
+		case AttId:
+			l += R_Length(v.AttributeValue.ValueLen() + 2)
+		case AttIdV:
+			if v.AttributeId.(AttIdV).VendorTypestring() == "IETF" {
+				l += R_Length(v.AttributeValue.ValueLen() + 8)
+			}
+			if v.AttributeId.(AttIdV).VendorTypestring() == "TYPE4" {
+				l += R_Length(v.AttributeValue.ValueLen() + 10)
+			}
+		}
+	}
+	return l
 }
