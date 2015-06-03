@@ -118,7 +118,6 @@ func (v HEXADECIMAL) writeBuff(buf *bytes.Buffer) {
 
 //定时属性值类型接口
 type AttributeValue interface {
-	//fillValue(buf *bytes.Buffer)
 	writeBuff(buf *bytes.Buffer)
 	String() string
 	Value() interface{}
@@ -126,6 +125,7 @@ type AttributeValue interface {
 	Typestring() string
 }
 
+//获取空属性值
 func newAttributeValue(attrType string) (AttributeValue, error) {
 	attrType = stringfix(attrType)
 	switch attrType {
@@ -152,6 +152,7 @@ func newAttributeValue(attrType string) (AttributeValue, error) {
 	}
 }
 
+//从buff获取属性值
 func newAttributeValueFromBuff(attrType string, length int, buf_in *bytes.Buffer) (AttributeValue, error) {
 	v, err := newAttributeValue(attrType)
 	if err != nil {
@@ -183,6 +184,9 @@ func newAttributeValueFromBuff(attrType string, length int, buf_in *bytes.Buffer
 	return v, nil
 }
 
+//根据指定内容生成属性值
+//数字类型只接受int或uint32
+//字符类型只接受string或[]byte
 func NewAttributeValue(attrType string, i interface{}) (AttributeValue, error) {
 	attrType = stringfix(attrType)
 	v, err := newAttributeValue(attrType)
@@ -267,7 +271,7 @@ func NewAttributeValue(attrType string, i interface{}) (AttributeValue, error) {
 	}
 }
 
-//
+//判断是否是有效的属性值类型字符串
 func IsValidAttributeType(s string) bool {
 	if s == "INTEGER" || s == "STRING" || s == "IPADDR" || s == "TAG_INT" || s == "TAG_STR" || s == "HEXADECIMAL" {
 		return true

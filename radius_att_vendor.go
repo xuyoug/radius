@@ -28,7 +28,7 @@ func (v VendorId) String() string {
 }
 
 //获取vendor的类型字符串
-func (v VendorId) Typestring() string {
+func (v VendorId) VendorTypestring() string {
 	s, ok := list_vendor_id[v]
 	if ok {
 		return s.Type
@@ -46,10 +46,10 @@ func GetVendorId(s string) (VendorId, error) {
 	return VENDOR_NO, ERR_VENDOR_INVALNAME
 }
 
-//
+//该vendorid下依据属性名称获取完整属性表达
 func (v VendorId) getAttByName(s string) (AttIdV, error) {
 	s = stringfix(s)
-	vtype := v.Typestring()
+	vtype := v.VendorTypestring()
 	if vtype == "" || !v.IsValidVendor() {
 		return ATTIDV_ERR, ERR_ATT_UNK
 	}
@@ -70,9 +70,9 @@ func (v VendorId) getAttByName(s string) (AttIdV, error) {
 	return ATTIDV_ERR, ERR_ATT_UNK
 }
 
-//
+//该vendorid下依据属性序号获取完整属性表达
 func (v VendorId) getAttById(i int) (AttIdV, error) {
-	vtype := v.Typestring()
+	vtype := v.VendorTypestring()
 	if vtype == "" || !v.IsValidVendor() {
 		return ATTIDV_ERR, ERR_ATT_UNK
 	}
