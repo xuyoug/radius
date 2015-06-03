@@ -39,8 +39,7 @@ import (
 //
 func NewRadius() *Radius {
 	r := new(Radius)
-	r.AttributeList.list_name = make(map[AttributeId][]AttributeValue, 0)
-	r.AttributeList.list_order = make([]AttributeId, 0)
+	r.AttributeList.attributes = make([]Attribute, 0)
 	return r
 }
 
@@ -81,21 +80,8 @@ func (r *Radius) WriteToBuff() *bytes.Buffer {
 	buf.WriteByte(byte(r.R_Id))
 	binary.Write(buf, binary.BigEndian, r.R_Length)
 	buf.Write([]byte(r.R_Authenticator))
-	for _, v := range r.AttributeList.list_order {
-		for _, vv := range r.AttributeList.list_name[v] {
-			switch v.(type) {
-			case AttId:
-				v.Write(buf)
-				buf.WriteByte(byte(vv.Len() + 2))
-				vv.WriteBuff(buf)
-			case AttIdV:
-				buf.WriteByte(byte(ATTID_VENDOR_SPECIFIC))
-				buf.WriteByte(byte(vv.Len() + 8))
-				v.Write(buf)
-				buf.WriteByte(byte(vv.Len() + 2))
-				vv.WriteBuff(buf)
-			}
-		}
+	for _, v := range r.AttributeList.attributes {
+		v.writeBuff(buf)
 	}
 	return buf
 }
@@ -104,18 +90,16 @@ func (r *Radius) WriteToBuff() *bytes.Buffer {
 func (r *Radius) GetLength() R_Length {
 	var l R_Length
 	l = 20
-	for _, v := range r.AttributeList.list_order {
-		for _, vv := range r.AttributeList.list_name[v] {
-			switch v.(type) {
-			case AttId:
-				l += R_Length(vv.Len() + 2)
-			case AttIdV:
-				if v.(AttIdV).VendorId.Typestring() == "IETF" {
-					l += R_Length(vv.Len() + 8)
-				}
-				if v.(AttIdV).VendorId.Typestring() == "TYPE4" {
-					l += R_Length(vv.Len() + 8)
-				}
+	for _, v := range r.AttributeList.attributes {
+		switch v.AttributeId.(type) {
+		case AttId:
+			l += R_Length(v.AttributeValue.Len() + 2)
+		case AttIdV:
+			if v.AttributeId.Typestring() == "IETF" {
+				l += R_Length(v.AttributeValue.Len() + 8)
+			}
+			if v.AttributeId.Typestring() == "TYPE4" {
+				l += R_Length(v.AttributeValue.Len() + 8)
 			}
 		}
 	}

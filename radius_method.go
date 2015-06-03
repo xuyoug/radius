@@ -148,7 +148,7 @@ func (r *Radius) getAttsFromBuff(buf *bytes.Buffer) error {
 		tmplen = int(blen) - 2
 		if aid != ATTID_VENDOR_SPECIFIC {
 			vtype := aid.Typestring()
-			v, err := NewAttributeValueFromBuff(vtype, bytes.NewBuffer(buf.Next(tmplen)))
+			v, err := NewAttributeValueFromBuff(vtype, tmplen, buf)
 			if err != nil {
 				return err
 			}
@@ -171,7 +171,7 @@ func (r *Radius) getAttsFromBuff(buf *bytes.Buffer) error {
 			if aidv.VendorId.Typestring() == "TYPE4" {
 				tmplen_v = tmplen - 8
 			}
-			v, err := NewAttributeValueFromBuff(aidv.Typestring(), bytes.NewBuffer(buf.Next(tmplen_v)))
+			v, err := NewAttributeValueFromBuff(aidv.Typestring(), tmplen_v, buf)
 			if err != nil {
 				return err
 			}

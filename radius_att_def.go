@@ -350,51 +350,82 @@ type attributeLen uint8
 
 //
 
+type Attribute struct {
+	AttributeId
+	AttributeValue
+}
+
+func (v *Attribute) writebuf(buf *bytes.Buffer) {
+	switch v.AttributeId.(type) {
+	case AttId:
+		v.AttributeId.Write(buf)
+		buf.WriteByte(byte(v.AttributeValue.Len() + 2))
+		v.AttributeValue.writeBuff(buf)
+	case AttIdV:
+		buf.WriteByte(byte(ATTID_VENDOR_SPECIFIC))
+		if v.AttributeId.Typestring() == "IETF" {
+			buf.WriteByte(byte(v.AttributeValue.Len() + 8))
+			v.AttributeId.Write(buf)
+			buf.WriteByte(byte(v.AttributeValue.Len() + 2))
+		}
+		if v.AttributeId.Typestring() == "TYPE4" {
+			buf.WriteByte(byte(v.AttributeValue.Len() + 10))
+			v.AttributeId.Write(buf)
+		}
+		v.AttributeValue.writeBuff(buf)
+	}
+}
+
 // AttrList
 type AttributeList struct {
-	list_name  map[AttributeId][]AttributeValue
-	list_order []AttributeId
+	attributes []Attribute
 }
 
 func (a *AttributeList) AddAttr(r AttributeId, v AttributeValue) {
-	if _, ok := a.list_name[r]; !ok {
-		a.list_name[r] = make([]AttributeValue, 0)
-		a.list_name[r] = append(a.list_name[r], v)
-		a.list_order = append(a.list_order, r)
-	} else {
-		a.list_name[r] = append(a.list_name[r], v)
-	}
+	a.attributes = append(a.attributes, Attribute{r, v})
 }
 
 func (a *AttributeList) GetAttrsNum() int {
-	return len(a.list_order)
+	return len(a.attributes)
 }
 
-func (a *AttributeList) GetAttrs() []AttributeId {
-	return a.list_order
-}
-
-func (a *AttributeList) GetAttr(r AttributeId) ([]AttributeValue, error) {
-	if v, ok := a.list_name[r]; ok {
-		return v, nil
+func (a *AttributeList) GetAttrs() ([]AttributeId, int) {
+	list := make([]AttributeId, 0)
+	var numbers int
+	for _, v := range a.attributes {
+		list = append(list, v.AttributeId)
+		numbers += 1
 	}
-	return nil, ERR_ATT_NO
+	return list, numbers
+}
+
+func (a *AttributeList) GetAttr(r AttributeId) ([]AttributeValue, int) {
+	list := make([]AttributeValue, 0)
+	var numbers int
+	for _, v := range a.attributes {
+		if v.AttributeId == r {
+			list = append(list, v.AttributeValue)
+			numbers += 1
+		}
+	}
+	return list, numbers
 }
 
 func (a *AttributeList) GetAttrFist(r AttributeId) (AttributeValue, error) {
-	if v, ok := a.list_name[r]; ok {
-		return v[0], nil
+	for _, v := range a.attributes {
+		if v.AttributeId == r {
+			return v.AttributeValue, nil
+		}
 	}
-	return nil, ERR_ATT_NO
+	return INTEGER(0), ERR_ATT_NO
 }
 
 func (a *AttributeList) String() string {
 	var s string
-	s += "Attributes:\n"
-	for i, v := range a.list_order {
-		for _, vv := range a.list_name[v] {
-			s += strconv.Itoa(i+1) + ": " + v.String() + " value:" + vv.String() + "\n"
-		}
+	s += "Attributes:"
+	for i, v := range a.attributes {
+		s += "\n"
+		s += strconv.Itoa(i+1) + ": " + v.AttributeId.String() + " value:" + v.AttributeValue.String()
 	}
 	return s
 }
