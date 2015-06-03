@@ -87,13 +87,13 @@ func (r *Radius) WriteToBuff() *bytes.Buffer {
 			case AttId:
 				v.Write(buf)
 				buf.WriteByte(byte(vv.Len() + 2))
-				vv.writetobuf(buf)
+				vv.WriteBuff(buf)
 			case AttIdV:
 				buf.WriteByte(byte(ATTID_VENDOR_SPECIFIC))
 				buf.WriteByte(byte(vv.Len() + 8))
 				v.Write(buf)
 				buf.WriteByte(byte(vv.Len() + 2))
-				vv.writetobuf(buf)
+				vv.WriteBuff(buf)
 			}
 		}
 	}

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	//"reflect"
 	"strconv"
 )
 
@@ -54,12 +55,98 @@ func (v HEXADECIMAL) Len() uint8 {
 	return uint8(len(v))
 }
 
+func (v INTEGER) Value() interface{} {
+	return int(v)
+}
+func (v STRING) Value() interface{} {
+	return string(v)
+}
+func (v IPADDR) Value() interface{} {
+	return []byte(v)
+}
+func (v TAG_INT) Value() interface{} {
+	return int(v)
+}
+func (v TAG_STR) Value() interface{} {
+	return string(v)
+}
+func (v HEXADECIMAL) Value() interface{} {
+	return []byte(v)
+}
+
+func (v INTEGER) Typestring() string {
+	return "INTEGER"
+}
+func (v STRING) Typestring() string {
+	return "STRING"
+}
+func (v IPADDR) Typestring() string {
+	return "IPADDR"
+}
+func (v TAG_INT) Typestring() string {
+	return "TAG_INT"
+}
+func (v TAG_STR) Typestring() string {
+	return "TAG_STR"
+}
+func (v HEXADECIMAL) Typestring() string {
+	return "HEXADECIMAL"
+}
+
+//获取值
+func (v INTEGER) WriteBuff(buf *bytes.Buffer) {
+	binary.Write(buf, binary.BigEndian, v)
+}
+func (v STRING) WriteBuff(buf *bytes.Buffer) {
+	buf.Write([]byte(v))
+}
+func (v IPADDR) WriteBuff(buf *bytes.Buffer) {
+	buf.Write([]byte(v))
+}
+func (v TAG_INT) WriteBuff(buf *bytes.Buffer) {
+	binary.Write(buf, binary.BigEndian, v)
+}
+func (v TAG_STR) WriteBuff(buf *bytes.Buffer) {
+	buf.Write([]byte(v))
+}
+func (v HEXADECIMAL) WriteBuff(buf *bytes.Buffer) {
+	buf.Write([]byte(v))
+}
+
+func FillValueFromBuff(v *AttributeValue, buf *bytes.Buffer) {
+	fmt.Println(v, *v, buf.Bytes())
+	fmt.Println((*v).(INTEGER))
+	switch (*v).Typestring() {
+	case "INTEGER":
+		var tmp int
+		binary.Read(buf, binary.BigEndian, &tmp)
+		*v = INTEGER(tmp)
+	case "STRING":
+		*v = STRING(buf.Bytes())
+	case "IPADDR":
+		*v = IPADDR(buf.Bytes())
+	case "TAG_INT":
+		var tmp int
+		binary.Read(buf, binary.BigEndian, &tmp)
+		*v = INTEGER(tmp)
+	case "TAG_STR":
+		*v = TAG_STR(buf.Bytes())
+	case "HEXADECIMAL":
+		*v = HEXADECIMAL(buf.Bytes())
+	default:
+		fmt.Println("here")
+	}
+	fmt.Println(v, *v, buf.Bytes())
+}
+
 //定时属性的值类型
 type AttributeValue interface {
 	//fillValue(buf *bytes.Buffer)
-	writetobuf(buf *bytes.Buffer)
+	WriteBuff(buf *bytes.Buffer)
 	String() string
+	Value() interface{}
 	Len() uint8
+	Typestring() string
 }
 
 func NewAttributeValue(attrType string) (AttributeValue, error) {
@@ -118,46 +205,6 @@ func NewAttributeValueFromBuff(attrType string, buf *bytes.Buffer) (AttributeVal
 	default:
 		return nil, ERR_ATT_TYPE
 	}
-}
-
-//获取值
-func (v *INTEGER) fillValue(buf *bytes.Buffer) {
-	binary.Read(buf, binary.BigEndian, &v)
-}
-func (v *STRING) fillValue(buf *bytes.Buffer) {
-	*v = STRING(buf.Bytes())
-}
-func (v *IPADDR) fillValue(buf *bytes.Buffer) {
-	*v = IPADDR(buf.Bytes())
-}
-func (v *TAG_INT) fillValue(buf *bytes.Buffer) {
-	binary.Read(buf, binary.BigEndian, &v)
-}
-func (v *TAG_STR) fillValue(buf *bytes.Buffer) {
-	*v = TAG_STR(buf.Bytes())
-}
-func (v *HEXADECIMAL) fillValue(buf *bytes.Buffer) {
-	*v = HEXADECIMAL(buf.Bytes())
-}
-
-//获取值
-func (v INTEGER) writetobuf(buf *bytes.Buffer) {
-	binary.Write(buf, binary.BigEndian, v)
-}
-func (v STRING) writetobuf(buf *bytes.Buffer) {
-	buf.Write([]byte(v))
-}
-func (v IPADDR) writetobuf(buf *bytes.Buffer) {
-	buf.Write([]byte(v))
-}
-func (v TAG_INT) writetobuf(buf *bytes.Buffer) {
-	binary.Write(buf, binary.BigEndian, v)
-}
-func (v TAG_STR) writetobuf(buf *bytes.Buffer) {
-	buf.Write([]byte(v))
-}
-func (v HEXADECIMAL) writetobuf(buf *bytes.Buffer) {
-	buf.Write([]byte(v))
 }
 
 //
