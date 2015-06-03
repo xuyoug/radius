@@ -37,23 +37,23 @@ func (v HEXADECIMAL) String() string {
 }
 
 //获取长度
-func (v INTEGER) Len() uint8 {
+func (v INTEGER) ValueLen() int {
 	return 4
 }
-func (v STRING) Len() uint8 {
-	return uint8(len(v))
+func (v STRING) ValueLen() int {
+	return len(v)
 }
-func (v IPADDR) Len() uint8 {
-	return uint8(len(v))
+func (v IPADDR) ValueLen() int {
+	return len(v)
 }
-func (v TAG_INT) Len() uint8 {
+func (v TAG_INT) ValueLen() int {
 	return 4
 }
-func (v TAG_STR) Len() uint8 {
-	return uint8(len(v))
+func (v TAG_STR) ValueLen() int {
+	return len(v)
 }
-func (v HEXADECIMAL) Len() uint8 {
-	return uint8(len(v))
+func (v HEXADECIMAL) ValueLen() int {
+	return len(v)
 }
 
 //获取值的直接表达
@@ -77,22 +77,22 @@ func (v HEXADECIMAL) Value() interface{} {
 }
 
 //获取类型字符串
-func (v INTEGER) Typestring() string {
+func (v INTEGER) ValueTypestring() string {
 	return "INTEGER"
 }
-func (v STRING) Typestring() string {
+func (v STRING) ValueTypestring() string {
 	return "STRING"
 }
-func (v IPADDR) Typestring() string {
+func (v IPADDR) ValueTypestring() string {
 	return "IPADDR"
 }
-func (v TAG_INT) Typestring() string {
+func (v TAG_INT) ValueTypestring() string {
 	return "TAG_INT"
 }
-func (v TAG_STR) Typestring() string {
+func (v TAG_STR) ValueTypestring() string {
 	return "TAG_STR"
 }
-func (v HEXADECIMAL) Typestring() string {
+func (v HEXADECIMAL) ValueTypestring() string {
 	return "HEXADECIMAL"
 }
 
@@ -121,8 +121,8 @@ type AttributeValue interface {
 	writeBuff(buf *bytes.Buffer)
 	String() string
 	Value() interface{}
-	Len() uint8
-	Typestring() string
+	ValueLen() int
+	ValueTypestring() string
 }
 
 //获取空属性值
@@ -187,6 +187,7 @@ func newAttributeValueFromBuff(attrType string, length int, buf_in *bytes.Buffer
 //根据指定内容生成属性值
 //数字类型只接受int或uint32
 //字符类型只接受string或[]byte
+//该方法主要由外部使用
 func NewAttributeValue(attrType string, i interface{}) (AttributeValue, error) {
 	attrType = stringfix(attrType)
 	v, err := newAttributeValue(attrType)
