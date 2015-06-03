@@ -36,7 +36,7 @@ func (v VendorId) VendorTypestring() string {
 	return ""
 }
 
-//对外提供由字符串获取vendorid的方法
+//由vendor名称获取vendorid的方法
 func GetVendorId(s string) (VendorId, error) {
 	s = stringfix(s)
 	v, ok := list_vendor_name[s]
