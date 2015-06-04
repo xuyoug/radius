@@ -256,14 +256,14 @@ const (
 	VENDOR_ALCATEL    VendorId = 6527
 )
 
-//Const_definition描述属性名称和类型结构
-type Const_definition struct {
+//Description_definition描述属性名称和类型结构
+type Description_definition struct {
 	Name string
 	Type string
 }
 
 //attribute的id映射
-var list_attributestand_id map[AttId]Const_definition = map[AttId]Const_definition{
+var list_attributestand_id map[AttId]Description_definition = map[AttId]Description_definition{
 	1:   {"USER_NAME", "STRING"},
 	2:   {"USER_PASSWORD", "IPADDR"},
 	3:   {"CHAP_PASSWORD", "IPADDR"},
@@ -723,7 +723,7 @@ var list_attributestand_name map[string]AttId = map[string]AttId{
 }
 
 //定义VEBDOR的ID映射
-var list_vendor_id map[VendorId]Const_definition = map[VendorId]Const_definition{
+var list_vendor_id map[VendorId]Description_definition = map[VendorId]Description_definition{
 	5:    {"ACC", "IETF"},
 	9:    {"CISCO", "IETF"},
 	15:   {"XYLOGICS", "IETF"},
@@ -771,7 +771,7 @@ var list_vendor_name map[string]VendorId = map[string]VendorId{
 }
 
 //定义厂商属性列表
-var list_attV_id map[VendorId]map[int]Const_definition = map[VendorId]map[int]Const_definition{
+var list_attV_id map[VendorId]map[int]Description_definition = map[VendorId]map[int]Description_definition{
 	VENDOR_ACC: {
 		1:  {"ACC_REASON_CODE", "INTEGER"},
 		2:  {"ACC_CCP_OPTION", "INTEGER"},
@@ -2525,14 +2525,14 @@ func Customer_SetVendorList(vendorid int, name string, typ string) error {
 	if typ != "TYPE4" {
 		typ = "IETF"
 	}
-	var c Const_definition = Const_definition{name, typ}
+	var c Description_definition = Description_definition{name, typ}
 	list_vendor_id[id] = c
 	list_vendor_name[name] = id
 	return nil
 }
 
 //ListVender返回已加载的vendorid列表
-func ListVender() map[VendorId]Const_definition {
+func ListVender() map[VendorId]Description_definition {
 	return list_vendor_id
 }
 
@@ -2550,7 +2550,7 @@ func Customer_SetVendorAttList(vendorname string, vaid_in int, vaname string, va
 		return ERR_ATTV_TYPE
 	}
 	vaname = stringfix(vaname)
-	var c Const_definition = Const_definition{vaname, vatype}
+	var c Description_definition = Description_definition{vaname, vatype}
 
 	_, ok := list_attV_id[vid][vaid_in]
 	if ok {
@@ -2563,6 +2563,6 @@ func Customer_SetVendorAttList(vendorname string, vaid_in int, vaname string, va
 }
 
 //ListattV返回所有厂商属性列表
-func ListattV() map[VendorId]map[int]Const_definition {
+func ListattV() map[VendorId]map[int]Description_definition {
 	return list_attV_id
 }
