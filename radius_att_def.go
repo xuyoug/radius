@@ -1,7 +1,6 @@
 package radius
 
 import (
-	//"fmt"
 	"bytes"
 	"encoding/binary"
 	"strconv"
@@ -20,7 +19,16 @@ func (a AttId) String() string {
 	return ""
 }
 
-//ValueTypestringTypestring方法返回其值类型
+//String方法返回AttId其标准名字
+func (a AttId) AttributeName() string {
+	s, ok := list_attributestand_id[a]
+	if ok {
+		return s.Name
+	}
+	return ""
+}
+
+//ValueTypestring方法返回其值类型字符串类型
 func (a AttId) ValueTypestring() string {
 	s, ok := list_attributestand_id[a]
 	if ok {
@@ -79,6 +87,15 @@ func (a AttIdV) String() string {
 		return a.VendorId.String() + ":" + v.Name + "(" + strconv.Itoa(a.Id) + ")"
 	}
 	return a.VendorId.String() + ":UNKNOWN_ATTRIBUTE(" + strconv.Itoa(a.Id) + ")"
+}
+
+//String方法返回AttIdV其标准名字
+func (a AttIdV) AttributeName() string {
+	v, ok := list_attV_id[a.VendorId][a.Id]
+	if ok {
+		return v.Name
+	}
+	return ""
 }
 
 //ValueTypestringTypestring方法返回其值类型
@@ -186,6 +203,7 @@ type AttributeId interface {
 	String() string
 	ValueTypestring() string
 	IsValid() bool
+	AttributeName() string
 }
 
 //NewAttributeId is a fucking and terrible thing!Fuck it!
@@ -302,6 +320,32 @@ func NewAttributeId(in ...interface{}) (AttributeId, error) {
 type Attribute struct {
 	AttributeId
 	AttributeValue
+}
+
+//AttributeMeanig返回属性表示的含义
+func (a *Attribute) AttributeMeanig() string {
+	s := a.AttributeName()
+	if a.AttributeValue.ValueTypestring() != "INTEGER" && a.AttributeValue.ValueTypestring() != "TAG_INT" {
+		return ""
+	}
+	v := a.Value().(int)
+	m, ok := list_attribute_meaning[s][uint32(v)]
+	if ok {
+		return m
+	}
+	return ""
+}
+
+//AttributeMeanig返回属性表示的含义
+func (a *Attribute) String() string {
+	var s string
+	s += a.AttributeId.String() + " value:" + a.AttributeValue.String()
+	if meaning := a.AttributeMeanig(); meaning != "" {
+		s += " ("
+		s += meaning
+		s += ")"
+	}
+	return s
 }
 
 //ATTIDV_ERR定义错误的厂商属性
@@ -434,7 +478,7 @@ func (a *AttributeList) String() string {
 	s += "Attributes:"
 	for i, v := range a.attributes {
 		s += "\n"
-		s += strconv.Itoa(i+1) + ": " + v.AttributeId.String() + " value:" + v.AttributeValue.String()
+		s += strconv.Itoa(i+1) + ": " + v.String()
 	}
 	return s
 }
