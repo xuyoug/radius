@@ -160,12 +160,14 @@ func newAttributeValueFromBuff(attrType string, length int, buf_in *bytes.Buffer
 		return nil, err
 	}
 	buf := bytes.NewBuffer(buf_in.Next(length))
+	var tmp uint32
 	switch attrType {
 	case "INTEGER":
 		if length != 4 {
 			return nil, errors.New("INTEGER type must use length 4")
 		}
-		binary.Read(buf, binary.BigEndian, &v)
+		binary.Read(buf, binary.BigEndian, &tmp)
+		v = INTEGER(tmp)
 	case "STRING":
 		v = STRING(buf.Bytes())
 	case "IPADDR":
@@ -174,7 +176,8 @@ func newAttributeValueFromBuff(attrType string, length int, buf_in *bytes.Buffer
 		if length != 4 {
 			return nil, errors.New("TAG_INT type must use length 4")
 		}
-		binary.Read(buf, binary.BigEndian, &v)
+		binary.Read(buf, binary.BigEndian, &tmp)
+		v = TAG_INT(tmp)
 	case "TAG_STR":
 		v = TAG_STR(buf.Bytes())
 	case "HEXADECIMAL":
