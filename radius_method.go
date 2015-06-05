@@ -197,3 +197,19 @@ func (r *Radius) GetLength() R_Length {
 	}
 	return l
 }
+
+//
+func (r *Radius) setLength() {
+	r.R_Length = r.GetLength()
+}
+
+//
+func (r *Radius) setAuthenticator() {
+
+}
+
+//
+func (r *Radius) Finished() {
+	r.setLength()
+	r.setAuthenticator()
+}

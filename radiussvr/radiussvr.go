@@ -1,6 +1,7 @@
 package radiussvr
 
 import (
+	"bytes"
 	"github.com/xuyoug/radius"
 	"net"
 	"strconv"
@@ -29,19 +30,23 @@ type ReplyRadius struct {
 }
 
 //
-func (sr *SrcRadius) ReplyRadius() *ReplyRadius {
+func (sr *SrcRadius) Reply() *ReplyRadius {
 	rr := new(ReplyRadius)
 	rr.DstAddr = sr.SrcAddr
 	rr.Secret = sr.Secret
 	rr.ReciveTime = sr.ReciveTime
 	rr.Radius = radius.NewRadius()
+	rr.Radius.R_Id = sr.Radius.R_Id
+	//计算Authenticator
+
+	//计算
 	rr.lisenter = sr.lisenter
 	return rr
 }
 
 //
-func (sr *ReplyRadius) Send() {
-	sr.lisenter.c_send <- sr
+func (dr *ReplyRadius) Send() {
+	dr.lisenter.c_send <- dr
 }
 
 //
@@ -53,6 +58,7 @@ type RadiusListener struct {
 	Send       int
 	c_recive   chan SrcRadius
 	c_send     chan SrcRadius
+	c_err      chan error
 	startTime  time.Time
 	timeout    time.Duration
 	lsr_sync   sync.RWMutex
@@ -60,8 +66,9 @@ type RadiusListener struct {
 
 //
 func (c *RadiusListener) run(cache int) error {
-	c.C_recive = make(chan SrcRadius, cache)
-	c.C_send = make(chan SrcRadius, cache)
+	c.c_recive = make(chan SrcRadius, cache)
+	c.c_send = make(chan ReplyRadius, cache)
+	c.c_err = make(chan error, cache)
 	c.startTime = time.Now()
 	con, err := net.ListenMulticastUDP("udp", nil, c.udpAddr)
 	if err != nil {
@@ -74,8 +81,51 @@ func (c *RadiusListener) run(cache int) error {
 
 //
 func (c *RadiusListener) getSrcRadius() {
+	var bs [4096]byte
+	var b_num int
+	var udpAddr *net.UDPAddr
+	var ip net.IP
+	var secret string
+	var err error
 	for {
-
+		b_num, udpAddr, err := c.conn.ReadFromUDP(bs[0:])
+		//
+		c.lsr_sync.Lock()
+		c.c_recive++
+		c.lsr_sync.Unlock()
+		//
+		if b_num > 4096 {
+			err = radius.ERR_LEN_INVALID
+		}
+		if err != nil {
+			c.c_err <- err
+			return
+		}
+		//
+		buf := bytes.NewBuffer(bs[0:b_num])
+		r := radius.NewRadius()
+		err = r.ReadFromBuffer(buf)
+		if err != nil {
+			c.c_err <- err
+			return
+		}
+		//
+		ip = udpAddr.IP
+		secret = c.secretlist.GetSecret(ip)
+		//
+		src_r := new(SrcRadius)
+		src_r.SrcAddr = udpAddr
+		src_r.ReciveTime = time.Now()
+		src_r.Secret = secret
+		src_r.Radius = r
+		src_r.lisenter = c
+		//
+		select {
+		case c.c_recive <- src_r:
+			return
+		case <-time.After(time.Second):
+			c.c_err <- ERR_DROP_TO
+		}
 	}
 }
 
