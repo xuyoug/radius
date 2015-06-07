@@ -60,11 +60,11 @@ func (rr *ReplyRadius) makebuf() {
 	rr.Radius.R_Length = rr.Radius.GetLength()
 	rr.Radius.WriteToBuff(rr.buf)
 	//计算最新的authenticator
+	rr.Radius.R_Authenticator = radius.R_Authenticator(rr.ReplyAuthenticator())
 
 	//
 	rr.buf = bytes.NewBuffer([]byte{})
 	rr.Radius.WriteToBuff(rr.buf)
-
 }
 
 //
@@ -186,11 +186,11 @@ func (c *RadiusListener) decoderadius(or *original_radius) {
 		return
 	}
 	//如果是计费请求报文，验证authenticator
-
-	//如果是响应报文。。。。
-
-	//如果是认证请求报文
-
+	if !src_r.IsValidAuthenticator() {
+		c.Add_wrong(ip, Err_SecretWrong)
+		c.endfmtgoroutine()
+		return
+	}
 	//
 	select {
 	case c.C_recive <- src_r:
@@ -212,6 +212,7 @@ func (c *RadiusListener) replyRadius() {
 			if err != nil {
 				rr.lisenter.Add_wrong(rr.DstAddr.IP, err)
 			}
+			c.add_replyed(rr.DstAddr.IP)
 		}
 	}
 }

@@ -28,14 +28,18 @@ func GetRadiusId() radius.R_Id {
 	return radiuscli_id
 }
 
-func NewAuthenticator() radius.R_Authenticator {
-
+//
+func NewAuthAuthenticator() radius.R_Authenticator {
+	bs := make([]byte, 16)
+	for i := 0; i < 16; i++ {
+		bs = append(bs, byte(getrand(255)))
+	}
+	return radius.R_Authenticator(bs)
 }
 
 //计算随机数
-
 func getrand(i int) int {
-
+	return cli_rand.Intn(i)
 }
 
 var cli_source rand.Source
