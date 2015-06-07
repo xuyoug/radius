@@ -51,6 +51,44 @@ func (r *R_Code) readFromBuff(buf *bytes.Buffer) error {
 	return ERR_CODE_WRONG
 }
 
+//
+func (r R_Code) Judge(judge bool) (R_Code, error) {
+	switch r {
+	case CodeAccessRequest:
+		if judge {
+			return CodeAccessAccept, nil
+		}
+		return CodeAccessReject, nil
+	case CodeAccountingRequest:
+		return CodeAccountingRespons, nil
+	}
+	return CodeAccessReject, ERR_NOTSUPPORT
+}
+
+//
+func (r R_Code) IsSupported() bool {
+	if r == CodeAccessRequest || r == CodeAccessAccept || r == CodeAccessReject || r == CodeAccountingRequest || r == CodeAccountingRespons {
+		return true
+	}
+	return false
+}
+
+//
+func (r R_Code) IsRequest() bool {
+	if r == CodeAccessRequest || r == CodeAccountingRequest {
+		return true
+	}
+	return false
+}
+
+//
+func (r R_Code) IsRespons() bool {
+	if r == CodeAccessAccept || r == CodeAccessReject || r == CodeAccountingRespons {
+		return true
+	}
+	return false
+}
+
 //methods of R_Id
 func (i R_Id) String() string {
 	return fmt.Sprintf("Id(%d)", i)
@@ -114,9 +152,6 @@ func (a R_Authenticator) String() string {
 //
 func (r *R_Authenticator) readFromBuff(buf *bytes.Buffer) error {
 	b := buf.Next(Radius_Authenticator_LEN)
-	if len(b) != Radius_Authenticator_LEN {
-		return ERR_AUTHENTICATOR_INVALID
-	}
 	*r = b
 	return nil
 }

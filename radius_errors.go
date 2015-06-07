@@ -6,19 +6,16 @@ import (
 
 var (
 	//系统错误
-	ERR_NET = errors.New("Wrong net connection")
+	ERR_NOTSUPPORT = errors.New("Not a support radius type")
 
 	//格式化错误
 	ERR_RADIUS_FMT = errors.New("Format radius package error")
-	ERR_RADIUS_SIG = errors.New("Invalid signature")
 
 	//radius头错误
 	ERR_CODE_INVALID = errors.New("Invalid radius Code")
 	ERR_CODE_WRONG   = errors.New("Error radius Code")
 
 	ERR_LEN_INVALID = errors.New("Invalid radius Length")
-
-	ERR_AUTHENTICATOR_INVALID = errors.New("Invalid radius Authenticator")
 
 	//vendor错误
 	ERR_VENDOR_INVALID   = errors.New("Invalid radius Vendor id")

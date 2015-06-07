@@ -2,6 +2,7 @@ package radiussvr
 
 import (
 	"bytes"
+	//"fmt"
 	"github.com/xuyoug/radius"
 	"net"
 	"strconv"
@@ -18,6 +19,7 @@ type SrcRadius struct {
 	ReciveTime time.Time
 	Radius     *radius.Radius
 	lisenter   *RadiusListener
+	buf        *bytes.Buffer
 }
 
 //
@@ -27,149 +29,201 @@ type ReplyRadius struct {
 	ReciveTime time.Time
 	Radius     *radius.Radius
 	lisenter   *RadiusListener
+	buf        *bytes.Buffer
 }
 
 //
-func (sr *SrcRadius) Reply() *ReplyRadius {
+func (sr *SrcRadius) Reply(judge bool) (*ReplyRadius, error) {
+	var err error
 	rr := new(ReplyRadius)
 	rr.DstAddr = sr.SrcAddr
 	rr.Secret = sr.Secret
 	rr.ReciveTime = sr.ReciveTime
+	rr.lisenter = sr.lisenter
 	rr.Radius = radius.NewRadius()
 	rr.Radius.R_Id = sr.Radius.R_Id
-	//计算Authenticator
+	rr.Radius.R_Authenticator = sr.Radius.R_Authenticator
+	rr.Radius.R_Code, err = sr.Radius.R_Code.Judge(judge)
+	//
+	if err != nil {
+		rr.lisenter.Add_wrong(rr.DstAddr.IP, err)
+		return nil, err
+	}
+	//
+	rr.buf = bytes.NewBuffer([]byte{})
 
-	//计算
-	rr.lisenter = sr.lisenter
-	return rr
+	return rr, nil //然后交由外部处理
+}
+
+//
+func (rr *ReplyRadius) makebuf() {
+	rr.Radius.R_Length = rr.Radius.GetLength()
+	rr.Radius.WriteToBuff(rr.buf)
+	//计算最新的authenticator
+
+	//
+	rr.buf = bytes.NewBuffer([]byte{})
+	rr.Radius.WriteToBuff(rr.buf)
+
 }
 
 //
 func (dr *ReplyRadius) Send() {
+	dr.makebuf()
 	dr.lisenter.c_send <- dr
 }
 
 //
 type RadiusListener struct {
-	conn       *net.UDPConn
-	udpAddr    *net.UDPAddr
-	secretlist *SecretList
-	Recived    int
-	Send       int
-	c_recive   chan SrcRadius
-	c_send     chan SrcRadius
-	c_err      chan error
-	startTime  time.Time
-	timeout    time.Duration
-	lsr_sync   sync.RWMutex
+	conn          *net.UDPConn
+	udpAddr       *net.UDPAddr
+	secretlist    *SecretList
+	cnt_received  int
+	cnt_replyed   int
+	cnt_wrong     int
+	nodesreceived map[string]int
+	nodesreplyed  map[string]int
+	nodeswrong    map[string]map[error]int
+	fmtgoroutine  int //标识当前有多少个协程在解radius报文
+	C_recive      chan *SrcRadius
+	c_or          chan *original_radius
+	c_send        chan *ReplyRadius
+	C_err         chan error
+	startTime     time.Time
+	timeout       time.Duration
+	lsr_sync_r    sync.RWMutex
+	lsr_sync_s    sync.RWMutex
+	lsr_sync_w    sync.RWMutex
+	lsr_sync_f    sync.RWMutex
+}
+
+//
+type original_radius struct {
+	udpAddr *net.UDPAddr
+	buf     *bytes.Buffer
 }
 
 //
 func (c *RadiusListener) run(cache int) error {
-	c.c_recive = make(chan SrcRadius, cache)
-	c.c_send = make(chan ReplyRadius, cache)
-	c.c_err = make(chan error, cache)
+	c.C_recive = make(chan *SrcRadius, cache)
+	c.c_or = make(chan *original_radius, cache)
+	c.c_send = make(chan *ReplyRadius, cache)
+	c.C_err = make(chan error, cache)
+	c.nodesreceived = make(map[string]int)
+	c.nodesreplyed = make(map[string]int)
+	c.nodeswrong = make(map[string]map[error]int)
 	c.startTime = time.Now()
-	con, err := net.ListenMulticastUDP("udp", nil, c.udpAddr)
+	con, err := net.ListenUDP("udp", c.udpAddr)
 	if err != nil {
 		return err
 	}
 	c.conn = con
-	go c.getSrcRadius()
+	go c.getSrcOriginalbytes()
+	go c.fmtRadius()
 	go c.replyRadius()
+	return nil
 }
 
 //
-func (c *RadiusListener) getSrcRadius() {
-	var bs [4096]byte
-	var b_num int
-	var udpAddr *net.UDPAddr
+func (c *RadiusListener) getSrcOriginalbytes() {
+	for {
+		var bs [4096]byte
+		var b_num int
+		var udpAddr *net.UDPAddr
+		var err error
+		b_num, udpAddr, err = c.conn.ReadFromUDP(bs[0:])
+		c.add_received(udpAddr.IP)
+		if err != nil {
+			c.Add_wrong(udpAddr.IP, err)
+			return
+		}
+		if b_num > 4096 || b_num < 20 {
+			err = radius.ERR_LEN_INVALID
+			c.Add_wrong(udpAddr.IP, err)
+			return
+		}
+		or := new(original_radius)
+		or.buf = bytes.NewBuffer(bs[0:b_num])
+		or.udpAddr = udpAddr
+		c.c_or <- or
+	}
+}
+
+//
+func (c *RadiusListener) fmtRadius() {
+	for {
+		select {
+		case or := <-c.c_or:
+			go c.decoderadius(or)
+		}
+	}
+}
+
+//
+func (c *RadiusListener) decoderadius(or *original_radius) {
 	var ip net.IP
 	var secret string
 	var err error
-	for {
-		b_num, udpAddr, err := c.conn.ReadFromUDP(bs[0:])
-		//
-		c.lsr_sync.Lock()
-		c.c_recive++
-		c.lsr_sync.Unlock()
-		//
-		if b_num > 4096 {
-			err = radius.ERR_LEN_INVALID
-		}
-		if err != nil {
-			c.c_err <- err
-			return
-		}
-		//
-		buf := bytes.NewBuffer(bs[0:b_num])
-		r := radius.NewRadius()
-		err = r.ReadFromBuffer(buf)
-		if err != nil {
-			c.c_err <- err
-			return
-		}
-		//
-		ip = udpAddr.IP
-		secret = c.secretlist.GetSecret(ip)
-		//
-		src_r := new(SrcRadius)
-		src_r.SrcAddr = udpAddr
-		src_r.ReciveTime = time.Now()
-		src_r.Secret = secret
-		src_r.Radius = r
-		src_r.lisenter = c
-		//
-		select {
-		case c.c_recive <- src_r:
-			return
-		case <-time.After(time.Second):
-			c.c_err <- ERR_DROP_TO
-		}
+	//
+	c.addfmtgoroutine()
+	src_r := new(SrcRadius)
+
+	ip = or.udpAddr.IP
+	secret = c.secretlist.GetSecret(ip.String())
+	src_r.Secret = secret
+	//
+
+	src_r.SrcAddr = or.udpAddr
+	src_r.ReciveTime = time.Now()
+	src_r.lisenter = c
+	src_r.buf = or.buf
+	src_r.Radius = radius.NewRadius()
+
+	err = src_r.Radius.ReadFromBuffer(src_r.buf)
+	if err != nil {
+		c.Add_wrong(ip, err)
+		c.endfmtgoroutine()
+		return
+	}
+	//如果是计费请求报文，验证authenticator
+
+	//如果是响应报文。。。。
+
+	//如果是认证请求报文
+
+	//
+	select {
+	case c.C_recive <- src_r:
+		c.endfmtgoroutine()
+		return
+	case <-time.After(time.Second):
+		c.endfmtgoroutine()
+		c.Add_wrong(ip, Err_Drop_SrcChan)
 	}
 }
 
 //
 func (c *RadiusListener) replyRadius() {
-
+	var err error
+	for {
+		select {
+		case rr := <-c.c_send:
+			_, err = rr.lisenter.conn.WriteToUDP(rr.buf.Bytes(), rr.DstAddr)
+			if err != nil {
+				rr.lisenter.Add_wrong(rr.DstAddr.IP, err)
+			}
+		}
+	}
 }
 
 //
-func (c *RadiusListener) AliveTime() time.Duration {
-	return time.Since(c.startTime)
-}
-
-//
-func (c *RadiusListener) Count_Discard() int {
-	c.lsr_sync.RLock()
-	discarded := c.Recived - c.Send
-	c.lsr_sync.RUnlock()
-	return discarded
-}
-
-//
-func (c *RadiusListener) Count_Recived() int {
-	c.lsr_sync.RLock()
-	n := c.Recived
-	c.lsr_sync.RUnlock()
-	return n
-}
-
-//
-func (c *RadiusListener) Count_Send() int {
-	c.lsr_sync.RLock()
-	n := c.Send
-	c.lsr_sync.RUnlock()
-	return n
-}
-
-//
-func RadiusServer(localip string, port int, secret_list *SecretList, timeout time.Duration, cache int) (*RadiusListener, error) {
-	addr := localip + ":" + strconv.Itoa(port)
+func RadiusServer(port int, secret_list *SecretList, timeout time.Duration, cache int) (*RadiusListener, error) {
+	addr := ":" + strconv.Itoa(port)
 	udpAddr, err := net.ResolveUDPAddr("udp4", addr)
 	if err != nil {
 		return nil, err
 	}
+	//
 	lsr := new(RadiusListener)
 	lsr.udpAddr = udpAddr
 	lsr.secretlist = secret_list
@@ -181,5 +235,4 @@ func RadiusServer(localip string, port int, secret_list *SecretList, timeout tim
 	}
 
 	return lsr, nil
-
 }
