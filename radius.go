@@ -1,36 +1,23 @@
 package radius
 
 //
-//定义radius的结构化方法和处理方法
+//定义radius报文的结构化方法和序列化方法
 //
+
+//radius.go
+//radius_att_def.go
+//radius_att_meaning.go
+//radius_att_value.go
+//radius_att_vendor.go
+//radius_com.go
+//radius_def.go
+//radius_errors.go
+//radius_method.go
 
 //定义radius的结构化方法
-
 //定义radius的处理方法
 
-import ()
-
-// func GetRadius(conn *net.UDPConn) (*Radius, error) {
-// 	var inbytes [4096]byte
-// 	n, addr, err := conn.ReadFromUDP(inbytes[0:])
-// 	if err != nil {
-// 		fmt.Println(err)
-// 	}
-
-// 	fmt.Println(n, addr)
-// 	fmt.Println(inbytes[0:n])
-
-// 	r := NewRadius()
-// 	r.FillFromBuf(bytes.NewBuffer(inbytes[0:n]))
-
-// 	fmt.Println(r)
-
-// 	//conn.WriteToUDP(inbytes[0:n], addr)
-
-// 	return r, err
-// }
-
-//
+//NewRadius初始化一个radius对象
 func NewRadius() *Radius {
 	r := new(Radius)
 	r.AttributeList.attributes = make([]Attribute, 0)
