@@ -5,7 +5,8 @@ import (
 	"crypto/md5"
 )
 
-//
+//bytesxor返回两个字节切片的异或
+//按长度最短的截取
 func bytesxor(i1, i2 []byte) []byte {
 	l := len(i2)
 	if len(i1) < l {
@@ -18,7 +19,8 @@ func bytesxor(i1, i2 []byte) []byte {
 	return o
 }
 
-//
+//Decipher_pap_passwd解密pap密码
+//可对外导出
 func Decipher_pap_passwd(psw_bytes []byte, secret string, authenticator []byte) string {
 	if len(psw_bytes)%16 != 0 || len(secret) == 0 {
 		return ""
@@ -41,7 +43,8 @@ func Decipher_pap_passwd(psw_bytes []byte, secret string, authenticator []byte) 
 	return string(bytes.TrimRight(psw_out, string([]byte{0})))
 }
 
-//
+//Encry_pap_passwd加密pap密码
+//可对外导出
 func Encry_pap_passwd(psw string, secret string, authenticator []byte) []byte {
 	if len(authenticator) != 16 || len(secret) == 0 {
 		return []byte{}
