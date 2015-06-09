@@ -276,6 +276,46 @@ func NewAttributeValue(attrType string, i interface{}) (AttributeValue, error) {
 	}
 }
 
+//NewAttributeValueS根据指定字符串生成属性值
+//该方法主要由外部使用
+func NewAttributeValueS(attrType, s string) (AttributeValue, error) {
+	attrType = stringfix(attrType)
+	v, err := NewAttributeValueEmpt(attrType)
+	if err != nil {
+		return INTEGER(0), err
+	}
+	switch attrType {
+	case "INTEGER":
+		i, err1 := strconv.Atoi(s)
+		if err1 == nil {
+			v = INTEGER(i)
+			return v, nil
+		}
+		return nil, ERR_ATTV_TYPE
+	case "STRING":
+		v = STRING(s)
+		return v, nil
+	case "IPADDR":
+		v = IPADDR(s)
+		return v, nil
+	case "TAG_INT":
+		i, err1 := strconv.Atoi(s)
+		if err1 == nil {
+			v = INTEGER(i)
+			return v, nil
+		}
+		return nil, ERR_ATTV_TYPE
+	case "TAG_STR":
+		v = TAG_STR(s)
+		return v, nil
+	case "HEXADECIMAL":
+		v = HEXADECIMAL(s)
+		return v, nil
+	default:
+		return nil, ERR_ATTV_TYPE
+	}
+}
+
 //IsValidAttributeType判断是否是有效的属性值类型字符串
 func IsValidAttributeValueType(s string) bool {
 	if s == "INTEGER" || s == "STRING" || s == "IPADDR" || s == "TAG_INT" || s == "TAG_STR" || s == "HEXADECIMAL" {
