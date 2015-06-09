@@ -2035,6 +2035,7 @@ var list_attribute_meaning map[string]map[uint32]string = map[string]map[uint32]
 	},
 }
 
+//AttributeMeanig根据属性名称和值返回其含义
 func AttributeMeanig(attributename string, i int) string {
 	//attributename = stringfix(attributename)
 	var_i := uint32(i)
