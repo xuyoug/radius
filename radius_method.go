@@ -37,21 +37,21 @@ func (i R_Code) String() (s string) {
 	return ERR_CODE_WRONG.Error() + ":(" + strconv.Itoa(int(i)) + ")"
 }
 
-//
+//从buf填充Code
 func (r *R_Code) readFromBuff(buf *bytes.Buffer) error {
 	b, err := buf.ReadByte()
 	if err != nil {
 		return ERR_RADIUS_FMT
 	}
 	i := R_Code(b)
-	if i < 6 || (i >= 11 && i <= 13) || i == 255 {
+	if i.IsSupported() {
 		*r = i
 		return nil
 	}
 	return ERR_CODE_WRONG
 }
 
-//
+//Judge判断响应报文的Code
 func (r R_Code) Judge(judge bool) (R_Code, error) {
 	switch r {
 	case CodeAccessRequest:
@@ -65,7 +65,7 @@ func (r R_Code) Judge(judge bool) (R_Code, error) {
 	return CodeAccessReject, ERR_NOTSUPPORT
 }
 
-//
+//判断是否是支持的Code
 func (r R_Code) IsSupported() bool {
 	if r == CodeAccessRequest || r == CodeAccessAccept || r == CodeAccessReject || r == CodeAccountingRequest || r == CodeAccountingRespons {
 		return true
@@ -73,7 +73,7 @@ func (r R_Code) IsSupported() bool {
 	return false
 }
 
-//
+//判断是否是请求报文
 func (r R_Code) IsRequest() bool {
 	if r == CodeAccessRequest || r == CodeAccountingRequest {
 		return true
@@ -81,7 +81,7 @@ func (r R_Code) IsRequest() bool {
 	return false
 }
 
-//
+//判断是否是响应报文
 func (r R_Code) IsRespons() bool {
 	if r == CodeAccessAccept || r == CodeAccessReject || r == CodeAccountingRespons {
 		return true
@@ -94,7 +94,7 @@ func (i R_Id) String() string {
 	return fmt.Sprintf("Id(%d)", i)
 }
 
-//
+//从buf填充Id
 func (r *R_Id) readFromBuff(buf *bytes.Buffer) error {
 	b, err := buf.ReadByte()
 	if err != nil {
@@ -110,15 +110,15 @@ func (l R_Length) String() string {
 	return fmt.Sprintf("Length(%d)", l)
 }
 
-//
-func (r R_Length) isValidLenth() bool {
-	if r >= radiusLength_MIN || r <= radiusLength_MAX {
+//判断是否是有效的radius长度
+func (r R_Length) IsValidLenth() bool {
+	if r >= R_Length_MIN || r <= R_Length_MAX {
 		return true
 	}
 	return false
 }
 
-//
+//checkLengthWithBuff判断buf长度和radius Length是否相等
 func (r *Radius) checkLengthWithBuff(buf *bytes.Buffer) bool {
 	l := R_Length(buf.Len())
 	if r.R_Length == l {
@@ -127,7 +127,7 @@ func (r *Radius) checkLengthWithBuff(buf *bytes.Buffer) bool {
 	return false
 }
 
-//
+//从buf填充radius Length
 func (r *R_Length) readFromBuff(buf *bytes.Buffer) error {
 	var b1, b2 byte
 	var err1, err2 error
@@ -137,7 +137,7 @@ func (r *R_Length) readFromBuff(buf *bytes.Buffer) error {
 		return ERR_LEN_INVALID
 	}
 	l := R_Length(b1<<8) + R_Length(b2)
-	if l.isValidLenth() {
+	if l.IsValidLenth() && buf.Len() >= int(l) { //不允许buf长度小于radius长度，但是大于可以
 		*r = l
 		return nil
 	}
@@ -149,16 +149,12 @@ func (a R_Authenticator) String() string {
 	return fmt.Sprintf("Authenticator %v", []byte(a))
 }
 
-//
+//从buf填充Authenticator
 func (r *R_Authenticator) readFromBuff(buf *bytes.Buffer) error {
-	b := buf.Next(Radius_Authenticator_LEN)
+	b := buf.Next(R_Authenticator_LEN)
 	*r = b
 	return nil
 }
-
-//
-
-//methosd of Attributes maps of Id or Name
 
 //methods of Radus
 func (r *Radius) String() string {
@@ -169,12 +165,13 @@ func (r *Radius) String() string {
 		r.AttributeList.String()
 }
 
-//
+//ReadFromBuffer从buf填充radius结构
 func (r *Radius) ReadFromBuffer(buf *bytes.Buffer) error {
 	err := r.R_Code.readFromBuff(buf)
 	if err != nil {
 		return errors.New("Format wrong on Code")
 	}
+
 	err = r.R_Id.readFromBuff(buf)
 	if err != nil {
 		return errors.New("Format wrong on Id")
@@ -199,10 +196,13 @@ func (r *Radius) ReadFromBuffer(buf *bytes.Buffer) error {
 		}
 		r.AttributeList.AddAttr(v)
 	}
+	if r.GetLength() != r.R_Length {
+		return ERR_OTHER
+	}
 	return nil
 }
 
-//
+//WriteToBuff将radius结构字节化写入buf
 func (r *Radius) WriteToBuff(buf *bytes.Buffer) {
 	buf.WriteByte(byte(r.R_Code))
 	buf.WriteByte(byte(r.R_Id))
@@ -213,7 +213,7 @@ func (r *Radius) WriteToBuff(buf *bytes.Buffer) {
 	}
 }
 
-//
+//GetLength获取radius结构字节化后的长度
 func (r *Radius) GetLength() R_Length {
 	var l R_Length
 	l = 20
@@ -231,20 +231,4 @@ func (r *Radius) GetLength() R_Length {
 		}
 	}
 	return l
-}
-
-//
-func (r *Radius) setLength() {
-	r.R_Length = r.GetLength()
-}
-
-//
-func (r *Radius) setAuthenticator() {
-
-}
-
-//
-func (r *Radius) Finished() {
-	r.setLength()
-	r.setAuthenticator()
 }
