@@ -5,11 +5,10 @@ import (
 )
 
 //厂商属性类型只有两种：IETF和TYPE4，就不封装了，直接使用字符串
+//本文件是关于VendorId的方法和根据字符串获取VendorId的方法
 
 //VendorId定义Vender字段类型
 type VendorId uint32
-
-//关于VendorId的方法和根据字符串获取VendorId的方法
 
 //IsValidVendor方法判断是否是有效Vendor
 func (v VendorId) IsValidVendor() bool {
