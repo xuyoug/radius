@@ -5,15 +5,14 @@ import (
 )
 
 var (
-	//系统错误
+	//系统错误，不支持的radius类型
 	ERR_NOTSUPPORT = errors.New("Not a support radius type")
 
 	//格式化错误
 	ERR_RADIUS_FMT = errors.New("Format radius package error")
 
 	//radius头错误
-	ERR_CODE_INVALID = errors.New("Invalid radius Code")
-	ERR_CODE_WRONG   = errors.New("Error radius Code")
+	ERR_CODE_WRONG = errors.New("Error radius Code")
 
 	ERR_LEN_INVALID = errors.New("Invalid radius Length")
 
