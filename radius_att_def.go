@@ -16,7 +16,7 @@ func (a AttId) String() string {
 	if ok {
 		return s.Name
 	}
-	return ""
+	return "UNKNOWN_STAND_ATTRIBUTE(" + strconv.Itoa(int(a)) + ")"
 }
 
 //String方法返回AttId其标准名字
@@ -135,7 +135,7 @@ func readAttIdV(buf *bytes.Buffer) (AttIdV, error) {
 		binary.Read(bytes.NewBuffer(buf.Next(4)), binary.BigEndian, &tmp)
 		vaid = int(tmp)
 	}
-	return AttIdV{vid, vaid}, nil
+	return AttIdV{vid, vaid}, nil //允许未知的属性
 }
 
 //WriteAttributeId方法将AttIdV自己写buffer
@@ -351,7 +351,7 @@ func (a *Attribute) String() string {
 //ATTIDV_ERR定义错误的厂商属性
 var ATTRIBUTE_ERR Attribute = Attribute{ATT_NO, INTEGER(0)}
 
-//
+//readAttribute从buf读取Attribute
 func readAttribute(buf *bytes.Buffer) (Attribute, error) {
 	var attid AttId
 	var length, lengthv int
@@ -412,67 +412,80 @@ func (v *Attribute) writeBuffer(buf *bytes.Buffer) {
 	switch v.AttributeId.(type) {
 	case AttId:
 		v.AttributeId.writeAttributeId(buf)
-		buf.WriteByte(byte(uint8(v.AttributeValue.ValueLen() + 2)))
+		buf.WriteByte(byte(uint8(v.ValueLen() + 2)))
 		v.AttributeValue.writeBuffer(buf)
 	case AttIdV:
 		buf.WriteByte(byte(ATTID_VENDOR_SPECIFIC))
 		if v.AttributeId.(AttIdV).VendorTypestring() == "IETF" {
-			buf.WriteByte(byte(uint8(v.AttributeValue.ValueLen() + 8)))
+			buf.WriteByte(byte(uint8(v.ValueLen() + 8)))
 			v.AttributeId.writeAttributeId(buf)
-			buf.WriteByte(byte(uint8(v.AttributeValue.ValueLen() + 2)))
+			buf.WriteByte(byte(uint8(v.ValueLen() + 2)))
 		}
 		if v.AttributeId.(AttIdV).VendorTypestring() == "TYPE4" {
-			buf.WriteByte(byte(uint8(v.AttributeValue.ValueLen() + 10)))
+			buf.WriteByte(byte(uint8(v.ValueLen() + 10)))
 			v.AttributeId.writeAttributeId(buf)
 		}
 		v.AttributeValue.writeBuffer(buf)
 	}
 }
 
-// AttrList
+//AttrList定义radius报文中的属性列表
 type AttributeList struct {
 	attributes []Attribute
 }
 
-//
+//AddAttr在radius属性列表中添加一个属性
 func (a *AttributeList) AddAttr(r Attribute) {
 	a.attributes = append(a.attributes, r)
 }
 
-//
+//GetAttrsNum获取AttributeList的属性数量
 func (a *AttributeList) GetAttrsNum() int {
 	return len(a.attributes)
 }
 
-//
-func (a *AttributeList) GetAttrs() ([]Attribute, int) {
-	return a.attributes, len(a.attributes)
+//GetAttrs获取所有属性
+func (a *AttributeList) GetAttrs() []Attribute {
+	return a.attributes
 }
 
-//
-func (a *AttributeList) GetAttr(r AttributeId) ([]AttributeValue, int) {
+//GetAttr获取指定属性的值的列表
+func (a *AttributeList) GetAttr(r AttributeId) []AttributeValue {
 	list := make([]AttributeValue, 0)
-	var numbers int
 	for _, v := range a.attributes {
 		if v.AttributeId == r {
 			list = append(list, v.AttributeValue)
-			numbers += 1
 		}
 	}
-	return list, numbers
+	return list
 }
 
-//
+//SetAttr设置指定属性的值
+//若不存在，则添加一个该属性
+func (a *AttributeList) SetAttr(r AttributeId, vs AttributeValue) {
+	ischanged := false
+	for _, v := range a.attributes {
+		if v.AttributeId == r {
+			v.AttributeValue = vs
+			ischanged = true
+		}
+	}
+	if !ischanged {
+		a.AddAttr(Attribute{r, vs})
+	}
+}
+
+//GetAttrFist获取第一个指定属性，若指定属性不存在，则返回错误
 func (a *AttributeList) GetAttrFist(r AttributeId) (AttributeValue, error) {
 	for _, v := range a.attributes {
 		if v.AttributeId == r {
 			return v.AttributeValue, nil
 		}
 	}
-	return INTEGER(0), ERR_ATT_NO
+	return nil, ERR_ATT_NO
 }
 
-//
+//String方法打印属性列表自身
 func (a *AttributeList) String() string {
 	var s string
 	s += "Attributes:"
