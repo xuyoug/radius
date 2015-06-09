@@ -5,17 +5,17 @@ import (
 	"time"
 )
 
-//
+//AliveTime返回radiuslistener的生存时间
 func (c *RadiusListener) AliveTime() time.Duration {
 	return time.Since(c.startTime)
 }
 
-//
+//StratTime返回radiuslistener的启动时间
 func (c *RadiusListener) StratTime() time.Time {
 	return c.startTime
 }
 
-//
+//sendErr向lsnr的错误队列发送一条错误
 func (c *RadiusListener) sendErr(err error) {
 	c.C_err <- err
 }
@@ -70,7 +70,7 @@ func (c *RadiusListener) add_replyed(ip_in net.IP) {
 	c.lsr_sync_r.Unlock()
 }
 
-//
+//Add_wrong添加一个错误计数，并发送到错误队列
 func (c *RadiusListener) Add_wrong(ip_in net.IP, err error) {
 	ip := ip_in.String()
 	c.lsr_sync_w.Lock()
