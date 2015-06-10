@@ -212,23 +212,3 @@ func (r *Radius) WriteToBuff(buf *bytes.Buffer) {
 		v.writeBuffer(buf)
 	}
 }
-
-//GetLength获取radius结构字节化后的长度
-func (r *Radius) GetLength() R_Length {
-	var l R_Length
-	l = 20
-	for _, v := range r.AttributeList.attributes {
-		switch v.AttributeId.(type) {
-		case AttId:
-			l += R_Length(v.AttributeValue.ValueLen() + 2)
-		case AttIdV:
-			if v.AttributeId.(AttIdV).VendorTypestring() == "IETF" {
-				l += R_Length(v.AttributeValue.ValueLen() + 8)
-			}
-			if v.AttributeId.(AttIdV).VendorTypestring() == "TYPE4" {
-				l += R_Length(v.AttributeValue.ValueLen() + 10)
-			}
-		}
-	}
-	return l
-}
