@@ -51,27 +51,29 @@ func setAuthenticator(r *radius.Radius, secret string) radius.R_Authenticator {
 	return r.R_Authenticator
 }
 
-// //
-// type id_geter struct{
-// 	id radius.R_Id
-// 	id_sync sync.Mutex
-// }
-
-// //
-// func (s *id_geter) getId() radius.R_Id {
-// 	s.id_sync.Lock()
-// 	if s.id == radius.R_Id(255) {
-// 		s.id = 0
-// 	} else{
-// 		s.id++
-// 	}
-// 	n := s.id
-// 	s.id_sync.Unlock()
-// 	return n
-// }
+//
+//一个客户端只能有一个id_geter
+type id_geter struct {
+	id      radius.R_Id
+	id_sync sync.Mutex
+}
 
 //
-type heaper struct{
+func (s *id_geter) getId() radius.R_Id {
+	s.id_sync.Lock()
+	if s.id == radius.R_Id(255) {
+		s.id = 0
+	} else {
+		s.id++
+	}
+	n := s.id
+	s.id_sync.Unlock()
+	return n
+}
+
+//
+//一个客户端可以有多个heaper
+type heaper struct { //顺序执行获取，不考虑锁
 	h [256]bool
 }
 
@@ -112,7 +114,37 @@ type keeper struct {
 	raddr    *net.UDPAddr
 	lport    int
 	conn     *net.UDPConn
-	keep     [256]K_STATU
+	h        *heaper
+	c_pre    chan radius.Radius
 	c_send   chan radius.Radius
-	c_recive chan radius.Radius
+	c_recive [256]chan radius.Radius
 }
+
+//newkeeper
+
+//close
+
+//Sender
+type RadiusSender struct {
+	id_geter
+	keepers []keeper
+	secret  string
+	c_send  chan radius.Radius
+}
+
+//NewSender
+func NewSender(dstip string, port int, secret string, timeout time.Duration) (*RadiusSender, error) {
+
+}
+
+//Close
+func (rs *RadiusSender) Close() {
+
+}
+
+//Send
+func (rs *RadiusSender) Send(r *radius.Radius) (*radius.Radius, error) {
+
+}
+
+//

@@ -20,7 +20,6 @@ package radius
 //NewRadius初始化一个radius对象
 func NewRadius() *Radius {
 	r := new(Radius)
-	r.R_Authenticator = make([]byte, 16)
 	r.AttributeList.attributes = make([]Attribute, 0)
 	return r
 }
