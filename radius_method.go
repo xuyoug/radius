@@ -137,7 +137,7 @@ func (r *R_Length) readFromBuff(buf *bytes.Buffer) error {
 		return ERR_LEN_INVALID
 	}
 	l := R_Length(b1<<8) + R_Length(b2)
-	if l.IsValidLenth() && buf.Len() >= int(l) { //不允许buf长度小于radius长度，但是大于可以
+	if l.IsValidLenth() && buf.Len()+4 >= int(l) { //不允许buf长度小于radius长度，但是大于可以
 		*r = l
 		return nil
 	}

@@ -126,46 +126,94 @@ func (c *RadiusListener) Count_Wrong() int {
 }
 
 //
-func (c *RadiusListener) Count_NodeDiscard(ip_in net.IP) int {
-	ip := ip_in.String()
+func (c *RadiusListener) Count_NodeDiscard(ip_in interface{}) int {
+	var ip string
+	var v1, v2 int
+	switch ip_in.(type) {
+	case string:
+		ip = ip_in.(string)
+	case net.IP:
+		ip = ip_in.(net.IP).String()
+	}
 	c.lsr_sync_r.RLock()
 	c.lsr_sync_s.RLock()
-	discarded := c.nodesreceived[ip] - c.nodesreplyed[ip]
+	v1, ok1 := c.nodesreceived[ip]
+	if !ok1 {
+		v1 = 0
+	}
+	v2, ok2 := c.nodesreplyed[ip]
+	if !ok2 {
+		v2 = 0
+	}
+	discarded := v1 - v2
 	c.lsr_sync_r.RUnlock()
 	c.lsr_sync_s.RUnlock()
 	return discarded
 }
 
 //
-func (c *RadiusListener) Count_NodeReceived(ip_in net.IP) int {
-	ip := ip_in.String()
+func (c *RadiusListener) Count_NodeReceived(ip_in interface{}) int {
+	var ip string
+	switch ip_in.(type) {
+	case string:
+		ip = ip_in.(string)
+	case net.IP:
+		ip = ip_in.(net.IP).String()
+	}
 	c.lsr_sync_r.RLock()
-	n := c.nodesreceived[ip]
+	n, ok := c.nodesreceived[ip]
+	if !ok {
+		n = 0
+	}
 	c.lsr_sync_r.RUnlock()
 	return n
 }
 
 //
-func (c *RadiusListener) Count_NodeReplyed(ip_in net.IP) int {
-	ip := ip_in.String()
+func (c *RadiusListener) Count_NodeReplyed(ip_in interface{}) int {
+	var ip string
+	switch ip_in.(type) {
+	case string:
+		ip = ip_in.(string)
+	case net.IP:
+		ip = ip_in.(net.IP).String()
+	}
 	c.lsr_sync_s.RLock()
-	n := c.nodesreplyed[ip]
+	n, ok := c.nodesreplyed[ip]
+	if !ok {
+		n = 0
+	}
 	c.lsr_sync_s.RUnlock()
 	return n
 }
 
 //
-func (c *RadiusListener) Count_NodeWrong(ip_in net.IP) map[error]int {
-	ip := ip_in.String()
+func (c *RadiusListener) Count_NodeWrong(ip_in interface{}) map[error]int {
+	var ip string
+	switch ip_in.(type) {
+	case string:
+		ip = ip_in.(string)
+	case net.IP:
+		ip = ip_in.(net.IP).String()
+	}
 	c.lsr_sync_w.RLock()
-	n := c.nodeswrong[ip]
+	n, ok := c.nodeswrong[ip]
+	if !ok {
+		n = nil
+	}
 	c.lsr_sync_w.RUnlock()
 	return n
 }
 
 //
-func (c *RadiusListener) Count_NodeWrongDesignated(ip_in net.IP, err error) int {
-	ip := ip_in.String()
+func (c *RadiusListener) Count_NodeWrongDesignated(ip_in interface{}, err error) int {
+	var ip string
+	switch ip_in.(type) {
+	case string:
+		ip = ip_in.(string)
+	case net.IP:
+		ip = ip_in.(net.IP).String()
+	}
 	c.lsr_sync_w.RLock()
 	n, ok := c.nodeswrong[ip][err]
 	if !ok {
