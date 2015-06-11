@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"net"
 	"strconv"
 )
 
@@ -171,7 +172,13 @@ func newAttributeValueFromBuff(attrType string, length int, buf_in *bytes.Buffer
 	case "STRING":
 		v = STRING(buf.Bytes())
 	case "IPADDR":
-		v = IPADDR(buf.Bytes())
+		s := string(buf.Bytes())
+		p := net.ParseIP(s)
+		if p != nil {
+			v = IPADDR([]byte(p.To4()))
+		} else {
+			v = IPADDR(buf.Bytes())
+		}
 	case "TAG_INT":
 		if length != 4 {
 			return nil, errors.New("TAG_INT type must use length 4")
@@ -226,7 +233,12 @@ func NewAttributeValue(attrType string, i interface{}) (AttributeValue, error) {
 	case "IPADDR":
 		tmp, ok := i.(string)
 		if ok {
-			v = IPADDR(tmp)
+			p := net.ParseIP(tmp)
+			if p != nil {
+				v = IPADDR([]byte(p.To4()))
+			} else {
+				v = IPADDR(tmp)
+			}
 			return v, nil
 		}
 		tmp1, ok1 := i.([]byte)
@@ -296,7 +308,12 @@ func NewAttributeValueS(attrType, s string) (AttributeValue, error) {
 		v = STRING(s)
 		return v, nil
 	case "IPADDR":
-		v = IPADDR(s)
+		p := net.ParseIP(s)
+		if p != nil {
+			v = IPADDR([]byte(p.To4()))
+		} else {
+			v = IPADDR(s)
+		}
 		return v, nil
 	case "TAG_INT":
 		i, err1 := strconv.Atoi(s)
