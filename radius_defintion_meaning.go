@@ -2036,10 +2036,9 @@ var list_attribute_meaning map[string]map[uint32]string = map[string]map[uint32]
 }
 
 //AttributeMeanig根据属性名称和值返回其含义
-func AttributeMeanig(attributename string, i int) string {
+func AttributeMeanig(attributename string, i uint32) string {
 	//attributename = stringfix(attributename)
-	var_i := uint32(i)
-	ss, ok := list_attribute_meaning[attributename][var_i]
+	ss, ok := list_attribute_meaning[attributename][i]
 	if ok {
 		return ss
 	}

@@ -1,8 +1,14 @@
 package radius
 
+//Description_definition描述属性名称和类型结构
+type Description_definition struct {
+	Name string
+	Type string
+}
+
 //定义标准属性
 const (
-	ATT_NO                             AttId = 0
+	ATTID_ERR                          AttId = 0
 	ATTID_USER_NAME                    AttId = 1
 	ATTID_USER_PASSWORD                AttId = 2
 	ATTID_CHAP_PASSWORD                AttId = 3
@@ -231,42 +237,11 @@ const (
 	ATTID_ASCEND_XMIT_RATE             AttId = 255
 )
 
-//定义常用厂商列表
-const (
-	VENDOR_NO         VendorId = 0 //本包中  此vendorid作为标准属性的封装，故NAME，STRING、ISVAILD方法中不认为是错误
-	VENDOR_ACC        VendorId = 5
-	VENDOR_CISCO      VendorId = 9
-	VENDOR_XYLOGICS   VendorId = 15
-	VENDOR_MERIT      VendorId = 61
-	VENDOR_GANDALF    VendorId = 64
-	VENDOR_SHIVA      VendorId = 166
-	VENDOR_LIVINGSTON VendorId = 307
-	VENDOR_MICROSOFT  VendorId = 311
-	VENDOR_3COM       VendorId = 429
-	VENDOR_ASCEND     VendorId = 529
-	VENDOR_BAY        VendorId = 1584
-	VENDOR_LUCENT     VendorId = 1751
-	VENDOR_REDBACK    VendorId = 2352
-	VENDOR_APTIS      VendorId = 2634
-	VENDOR_MASTERSOFT VendorId = 5401
-	VENDOR_QUINTUM    VendorId = 6618
-	VENDOR_HUAWEI     VendorId = 2011
-	VENDOR_JUNIPER    VendorId = 4874
-	VENDOR_ZTE        VendorId = 3902
-	VENDOR_ALCATEL    VendorId = 6527
-)
-
-//Description_definition描述属性名称和类型结构
-type Description_definition struct {
-	Name string
-	Type string
-}
-
-//attribute的id映射
+//标准属性的id映射
 var list_attributestand_id map[AttId]Description_definition = map[AttId]Description_definition{
 	1:   {"USER_NAME", "STRING"},
-	2:   {"USER_PASSWORD", "IPADDR"},
-	3:   {"CHAP_PASSWORD", "IPADDR"},
+	2:   {"USER_PASSWORD", "STRING"},
+	3:   {"CHAP_PASSWORD", "STRING"},
 	4:   {"NAS_IP_ADDRESS", "IPADDR"},
 	5:   {"NAS_PORT", "INTEGER"},
 	6:   {"SERVICE_TYPE", "INTEGER"},
@@ -492,7 +467,7 @@ var list_attributestand_id map[AttId]Description_definition = map[AttId]Descript
 	255: {"ASCEND_XMIT_RATE", "INTEGER"},
 }
 
-//attribute的name映射
+//标准属性的name映射
 var list_attributestand_name map[string]AttId = map[string]AttId{
 	"USER_NAME":                    1,
 	"USER_PASSWORD":                2,
@@ -720,54 +695,6 @@ var list_attributestand_name map[string]AttId = map[string]AttId{
 	"ASCEND_PPP_ADDRESS":           253,
 	"ASCEND_MPP_IDLE_PERCENT":      254,
 	"ASCEND_XMIT_RATE":             255,
-}
-
-//定义VEBDOR的ID映射
-var list_vendor_id map[VendorId]Description_definition = map[VendorId]Description_definition{
-	5:    {"ACC", "IETF"},
-	9:    {"CISCO", "IETF"},
-	15:   {"XYLOGICS", "IETF"},
-	61:   {"MERIT", "IETF"},
-	64:   {"GANDALF", "IETF"},
-	166:  {"SHIVA", "IETF"},
-	307:  {"LIVINGSTON", "IETF"},
-	311:  {"MICROSOFT", "IETF"},
-	429:  {"3COM", "TYPE4"},
-	529:  {"ASCEND", "IETF"},
-	1584: {"BAY", "IETF"},
-	1751: {"LUCENT", "IETF"},
-	2352: {"REDBACK", "IETF"},
-	2634: {"APTIS", "IETF"},
-	5401: {"MASTERSOFT", "IETF"},
-	6618: {"QUINTUM", "IETF"},
-	2011: {"HUAWEI", "IETF"},
-	4874: {"JUNIPER", "IETF"},
-	3902: {"ZTE", "IETF"},
-	6527: {"ALCATEL", "IETF"},
-}
-
-//定义VENDOR的NAME映射
-var list_vendor_name map[string]VendorId = map[string]VendorId{
-	"ACC":        5,
-	"CISCO":      9,
-	"XYLOGICS":   15,
-	"MERIT":      61,
-	"GANDALF":    64,
-	"SHIVA":      166,
-	"LIVINGSTON": 307,
-	"MICROSOFT":  311,
-	"3COM":       429,
-	"ASCEND":     529,
-	"BAY":        1584,
-	"LUCENT":     1751,
-	"REDBACK":    2352,
-	"APTIS":      2634,
-	"MASTERSOFT": 5401,
-	"QUINTUM":    6618,
-	"HUAWEI":     2011,
-	"JUNIPER":    4874,
-	"ZTE":        3902,
-	"ALCATEL":    6527,
 }
 
 //定义厂商属性列表
@@ -1446,7 +1373,7 @@ var list_attV_id map[VendorId]map[int]Description_definition = map[VendorId]map[
 		2200:  {"3COM_MOBILE_NUMBYTES_RXED", "INTEGER"},
 		2201:  {"3COM_NUM_FAX_PAGES_PROCESSED", "INTEGER"},
 		2202:  {"3COM_COMPRESSION_TYPE", "INTEGER"},
-		2203:  {"3COM_CALL_ERROR_CODE", "INTEGER"},
+		2203:  {"3COM_CALL_ERROCode", "INTEGER"},
 		2204:  {"3COM_MODEM_SETUP_TIME", "INTEGER"},
 		2205:  {"3COM_CALL_CONNECTING_TIME", "INTEGER"},
 		2206:  {"3COM_CONNECT_TIME", "INTEGER"},
@@ -2316,7 +2243,7 @@ var list_attV_name map[VendorId]map[string]int = map[VendorId]map[string]int{
 		"3COM_MOBILE_NUMBYTES_RXED":             2200,
 		"3COM_NUM_FAX_PAGES_PROCESSED":          2201,
 		"3COM_COMPRESSION_TYPE":                 2202,
-		"3COM_CALL_ERROR_CODE":                  2203,
+		"3COM_CALL_ERROCode":                    2203,
 		"3COM_MODEM_SETUP_TIME":                 2204,
 		"3COM_CALL_CONNECTING_TIME":             2205,
 		"3COM_CONNECT_TIME":                     2206,
@@ -2507,33 +2434,6 @@ var list_attV_name map[VendorId]map[string]int = map[VendorId]map[string]int{
 		"3COM_SERVER_TIME":                      61440,
 		"3COM_REQUEST_TYPE":                     61441,
 	},
-}
-
-//Customer_SetVendorList对外提供重载vendor的方法
-//已存在的不允许重载
-//vendortype不为TYPE4的均设置为IETF
-func Customer_SetVendorList(vendorid int, name string, typ string) error {
-	id := VendorId(vendorid)
-	if id == VENDOR_NO {
-		return ERR_SET_VENDOR //不允许重载vendorid为0的
-	}
-	if _, ok := list_vendor_id[id]; ok { //若存在，则不允许重载
-		return ERR_SET_VENDOR
-	}
-	name = stringfix(name)
-	typ = stringfix(typ)
-	if typ != "TYPE4" {
-		typ = "IETF"
-	}
-	var c Description_definition = Description_definition{name, typ}
-	list_vendor_id[id] = c
-	list_vendor_name[name] = id
-	return nil
-}
-
-//ListVender返回已加载的vendorid列表
-func ListVender() map[VendorId]Description_definition {
-	return list_vendor_id
 }
 
 //Customer_SetVendorAttList提供设置厂商属性列表的方法
