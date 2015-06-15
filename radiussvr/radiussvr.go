@@ -19,7 +19,6 @@ type SrcRadius struct {
 	ReciveTime time.Time
 	Radius     *radius.Radius
 	lisenter   *RadiusListener
-	buf        *bytes.Buffer
 }
 
 //ReplyRadius定义响应radius报文结构
@@ -29,48 +28,28 @@ type ReplyRadius struct {
 	ReciveTime time.Time
 	Radius     *radius.Radius
 	lisenter   *RadiusListener
-	buf        *bytes.Buffer
 }
 
 //Reply由源报文生成基础响应报文
 //不带任何属性
 func (sr *SrcRadius) Reply(judge bool) (*ReplyRadius, error) {
-	var err error
 	rr := new(ReplyRadius)
 	rr.DstAddr = sr.SrcAddr
 	rr.Secret = sr.Secret
 	rr.ReciveTime = sr.ReciveTime
 	rr.lisenter = sr.lisenter
-	rr.Radius = radius.NewRadius()
-	rr.Radius.R_Id = sr.Radius.R_Id
-	rr.Radius.R_Authenticator = sr.Radius.R_Authenticator
-	rr.Radius.R_Code, err = sr.Radius.R_Code.Judge(judge)
+	rr.Radius = sr.Radius.Ack(judge)
 	//
-	if err != nil {
-		rr.lisenter.Add_wrong(rr.DstAddr.IP, err)
-		return nil, err
+	if rr.Radius == nil {
+		rr.lisenter.Add_wrong(rr.DstAddr.IP, Err_CanotReply)
+		return nil, Err_CanotReply
 	}
 	//
-	rr.buf = bytes.NewBuffer([]byte{})
-
 	return rr, nil //然后交由外部处理
-}
-
-//makebuf字节化响应报文
-func (rr *ReplyRadius) makebuf() {
-	rr.Radius.R_Length = rr.Radius.GetLength()
-	rr.Radius.WriteToBuff(rr.buf)
-	//计算最新的authenticator
-	rr.Radius.R_Authenticator = radius.R_Authenticator(rr.ReplyAuthenticator())
-
-	//
-	rr.buf = bytes.NewBuffer([]byte{})
-	rr.Radius.WriteToBuff(rr.buf)
 }
 
 //Send发送响应报文
 func (dr *ReplyRadius) Send() {
-	dr.makebuf()
 	dr.lisenter.c_send <- dr
 }
 
@@ -179,17 +158,15 @@ func (c *RadiusListener) decoderadius(or *original_radius) {
 	src_r.SrcAddr = or.udpAddr
 	src_r.ReciveTime = time.Now()
 	src_r.lisenter = c
-	src_r.buf = or.buf
-	src_r.Radius = radius.NewRadius()
+	src_r.Radius, err = radius.ReadFromBuffer(or.buf)
 
-	err = src_r.Radius.ReadFromBuffer(src_r.buf)
 	if err != nil {
 		c.Add_wrong(ip, err)
 		c.endfmtgoroutine()
 		return
 	}
 	//如果是计费请求报文，验证authenticator
-	if !src_r.IsValidAuthenticator() {
+	if !src_r.CheckAuthenticator() {
 		c.Add_wrong(ip, Err_SecretWrong)
 		c.endfmtgoroutine()
 		return
@@ -212,7 +189,9 @@ func (c *RadiusListener) replyRadius() {
 	for {
 		select {
 		case rr := <-c.c_send:
-			_, err = rr.lisenter.conn.WriteToUDP(rr.buf.Bytes(), rr.DstAddr)
+			rr.Radius.SetAuthenticator(rr.Secret)
+			rr.Radius.SetLength()
+			_, err = c.conn.WriteToUDP(rr.Radius.Bytes(), rr.DstAddr)
 			if err != nil {
 				rr.lisenter.Add_wrong(rr.DstAddr.IP, err)
 			}

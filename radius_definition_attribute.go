@@ -2441,13 +2441,13 @@ var list_attV_name map[VendorId]map[string]int = map[VendorId]map[string]int{
 //需要vendorname可识别，对于新厂商，需要先使用Customer_SetVendorList方法注册厂商
 //其属性值类型必须符合规范，必须是INTEGER 、STRING 、IPADDR 、TAG_INT 、TAG_STR 、HEXADECIMAL之一
 func Customer_SetVendorAttList(vendorname string, vaid_in int, vaname string, vatype string) error {
-	vid, err := GetVendorId(vendorname)
-	if err != nil {
-		return err
+	vid := GetVendorId(vendorname)
+	if vid == VENDOR_ERR {
+		return ERR_VENDOR_INVALNAME
 	}
 	vatype = stringfix(vatype)
 	if !IsValidAttributeValueType(vatype) {
-		return ERR_ATTV_TYPE
+		return ERR_ATT_VTYPE
 	}
 	vaname = stringfix(vaname)
 	var c Description_definition = Description_definition{vaname, vatype}

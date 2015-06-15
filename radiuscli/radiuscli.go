@@ -2,7 +2,6 @@ package radiuscli
 
 import (
 	"bytes"
-	"crypto/md5"
 	"errors"
 	"fmt"
 	"github.com/xuyoug/radius"
@@ -31,40 +30,17 @@ func getrand(i int) int {
 }
 
 //
-func newAuthenticator() radius.R_Authenticator {
-	bs := make([]byte, 0)
-	for i := 0; i < 16; i++ {
-		bs = append(bs, byte(getrand(255)))
-	}
-	return radius.R_Authenticator(bs)
-}
-
-//
-func setAuthenticator(r *radius.Radius, secret string) {
-	if r.R_Code == radius.CodeAccountingRequest {
-		buf := bytes.NewBuffer([]byte{})
-		r.R_Authenticator = radius.R_Authenticator([]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
-		r.WriteToBuff(buf)
-		buf.Write([]byte(secret))
-		m := md5.Sum(buf.Bytes())
-		r.R_Authenticator = radius.R_Authenticator(m[:])
-	} else {
-		r.R_Authenticator = newAuthenticator()
-	}
-}
-
-//
 //一个客户端只能有一个id_geter
 type id_geter struct {
-	id      radius.R_Id
+	id      radius.Id
 	id_sync sync.Mutex
 }
 
 //
-func (s *id_geter) getId() radius.R_Id {
+func (s *id_geter) getId() radius.Id {
 	s.id_sync.Lock()
-	if s.id == radius.R_Id(255) {
-		s.id = radius.R_Id(0)
+	if s.id == radius.Id(255) {
+		s.id = radius.Id(0)
 	} else {
 		s.id++
 	}
@@ -136,11 +112,12 @@ type keeper struct {
 	c_pre        chan *radius.Radius
 	c_recive     [256]chan *radius.Radius
 	c_close      chan bool
-	c_err        chan error
+	C_err        chan error
 }
 
 //newkeeper
-func newkeeper(svrip *net.UDPAddr, c_err_in chan error) (*keeper, error) {
+//一个keeper一个本地端口
+func newkeeper(svrip *net.UDPAddr, C_err_in chan error) (*keeper, error) {
 
 	k := new(keeper)
 	k.svraddr = svrip
@@ -157,7 +134,7 @@ func newkeeper(svrip *net.UDPAddr, c_err_in chan error) (*keeper, error) {
 		k.c_recive[i] = make(chan *radius.Radius)
 	}
 	k.c_close = make(chan bool) //
-	k.c_err = c_err_in          //
+	k.C_err = C_err_in          //
 	k.state = true
 	go k.keeperrecive()
 	go k.keepersend()
@@ -192,15 +169,13 @@ func (k *keeper) keepersend() {
 	for {
 		select {
 		case r := <-k.c_pre:
-			buf := bytes.NewBuffer([]byte{})
-			r.WriteToBuff(buf)
-			_, err := k.conn.Write(buf.Bytes())
+			_, err := k.conn.Write(r.Bytes())
 			if err != nil {
-				k.c_err <- err
+				k.C_err <- err
 			}
 			k.lastworktime = time.Now()
 		case <-k.c_close:
-			fmt.Print("close keeper and keeper sender out")
+			fmt.Print("close keeper and keeper_sender out")
 			break
 		}
 	}
@@ -212,20 +187,20 @@ func (k *keeper) keeperrecive() {
 		data := make([]byte, 4096)
 		n, udpaddr_in, err := k.conn.ReadFromUDP(data)
 		if err != nil && k.state {
-			k.c_err <- err
+			k.C_err <- err
 		}
 
 		if udpaddr_in.String() != k.svraddr.String() {
 			err := errors.New("WARNING:recived data from :" + udpaddr_in.String())
-			k.c_err <- err
+			k.C_err <- err
 			break //recive the target server's data
 		}
 		r := radius.NewRadius()
-		r.ReadFromBuffer(bytes.NewBuffer(data[0:n]))
-		id := int(r.R_Id)
+		r.Read(bytes.NewBuffer(data[0:n]))
+		id := int(r.Id)
 		if k.h.isvalid(id) {
 			err := errors.New("Recived response but aleady timeout: port:" + strconv.Itoa(k.lport) + " Id:" + strconv.Itoa(id))
-			k.c_err <- err
+			k.C_err <- err
 			continue
 		}
 
@@ -237,21 +212,23 @@ func (k *keeper) keeperrecive() {
 }
 
 //send
-func (k *keeper) send(r *radius.Radius, timeout int) *radius.Radius {
-	id := int(r.R_Id)
+func (k *keeper) send(r *radius.Radius, timeout int) (*radius.Radius, time.Duration) {
+	id := int(r.Id)
 	t_d, _ := time.ParseDuration(strconv.Itoa(timeout) + "s")
 	k.h.setused(id)
 	k.c_pre <- r
+	t1 := time.Now()
 	select {
 	case rr := <-k.c_recive[id]:
+		t := time.Since(t1)
 		k.h.setfree(id)
-		return rr
+		return rr, t
 	case <-time.After(t_d):
 		k.h.setfree(id)
 		err := errors.New("Recive response timeout: port:" + strconv.Itoa(k.lport) + " Id:" + strconv.Itoa(id))
 
-		k.c_err <- err
-		return nil
+		k.C_err <- err
+		return nil, t_d
 	}
 	panic("panic in keeper send method")
 }
@@ -263,7 +240,7 @@ type RadiusSender struct {
 	keepers map[int]*keeper
 	secret  string
 	timeout int
-	c_err   chan error
+	C_err   chan error
 }
 
 //NewSender
@@ -278,7 +255,7 @@ func NewSender(dstip string, port int, secret string, timeout int) (*RadiusSende
 	sdr.secret = secret
 	sdr.idgtr = newidgeter()
 	sdr.keepers = make(map[int]*keeper)
-	sdr.c_err = make(chan error, 1024)
+	sdr.C_err = make(chan error, 1024)
 	sdr.timeout = timeout
 
 	//
@@ -289,14 +266,11 @@ func NewSender(dstip string, port int, secret string, timeout int) (*RadiusSende
 
 //Close
 func (rs *RadiusSender) Close() {
-	for _, v := range rs.keepers {
-		v.close()
-	}
 	for i, v := range rs.keepers {
 		delete(rs.keepers, i)
 		v.close()
 	}
-	close(rs.c_err)
+	close(rs.C_err)
 }
 
 //callbackkeeper
@@ -316,13 +290,13 @@ func (rs *RadiusSender) callbackkeeper() {
 }
 
 //newid
-func (rs *RadiusSender) newId() radius.R_Id {
+func (rs *RadiusSender) newId() radius.Id {
 	return rs.idgtr.getId()
 }
 
 //newkeeper
 func (rs *RadiusSender) newkeeper() int {
-	k, err := newkeeper(rs.svrip, rs.c_err)
+	k, err := newkeeper(rs.svrip, rs.C_err)
 	if err != nil {
 		panic(err.Error())
 	}
@@ -334,7 +308,7 @@ func (rs *RadiusSender) newkeeper() int {
 }
 
 //getvalidkeeper
-func (rs *RadiusSender) getvalidkeeper(id radius.R_Id) *keeper {
+func (rs *RadiusSender) getvalidkeeper(id radius.Id) *keeper {
 	i := int(id)
 	if len(rs.keepers) == 0 { //
 		kid := rs.newkeeper()
@@ -350,17 +324,20 @@ func (rs *RadiusSender) getvalidkeeper(id radius.R_Id) *keeper {
 }
 
 //Send
-func (rs *RadiusSender) Send(r *radius.Radius) (*radius.Radius, error) {
-	setAuthenticator(r, rs.secret)
-	id := rs.newId()
-	r.R_Id = id
-	k := rs.getvalidkeeper(id) //
-	rr := k.send(r, rs.timeout)
-	//验证authenticator还没加上
+func (rs *RadiusSender) Send(r *radius.Radius) (*radius.Radius, time.Duration, error) {
+	r.SetAuthenticator(rs.secret)
+	r.SetLength()
+	r.Id = rs.newId()
+	k := rs.getvalidkeeper(r.Id) //
+	rr, t := k.send(r, rs.timeout)
+
 	if rr == nil {
-		return nil, errors.New("Timeout")
+		return nil, t, errors.New("Timeout")
 	}
-	return rr, nil
+	if !rr.IsResponseValid(r.Authenticator, rs.secret) { //验证authenticator
+		return nil, t, errors.New("Recived but Authenticator Error")
+	}
+	return rr, t, nil
 }
 
 //

@@ -2,6 +2,7 @@ package radius
 
 import (
 	"bytes"
+	"strconv"
 )
 
 //AttId定义标准属性Id
@@ -11,7 +12,7 @@ type AttId uint8
 func (a AttId) String() string {
 	s, ok := list_attributestand_id[a]
 	if ok {
-		return s.Name
+		return s.Name + "(" + strconv.Itoa(int(a)) + ")"
 	}
 	return "UNKNOWN_STAND_ATTRIBUTE(" + strconv.Itoa(int(a)) + ")"
 }
@@ -41,12 +42,8 @@ func (a AttId) IsValid() bool {
 }
 
 //write方法将AttId自己写入buffer
-func (a AttId) write(buf *bytes.Buffer) error {
-	err := buf.WriteByte(byte(a))
-	if err != nil {
-		return err
-	}
-	return nil
+func (a AttId) write(buf *bytes.Buffer) {
+	buf.WriteByte(byte(a))
 }
 
 //readAttId提供从buffer读取AttId的方法

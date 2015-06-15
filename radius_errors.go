@@ -21,14 +21,12 @@ var (
 	//属性错误
 	ERR_ATT_FMT   = errors.New("Attribute format error")
 	ERR_ATT_UKN   = errors.New("Unknow Attribute")
-	ERR_ATT_OTH   = errors.New("Other Attribute error")
 	ERR_ATT_TYPE  = errors.New("Error Attribute type")
-	ERR_ATT_VTYPE = errors.New("Error Attribute value type") //
+	ERR_ATT_VTYPE = errors.New("Error Attribute value type")
 	ERR_ATT_SET   = errors.New("Error on set Attribute value")
 	ERR_ATT_NO    = errors.New("No such Attribute")
 
 	//其它
-	ERR_OTHER      = errors.New("Other radius error")
 	ERR_VALUE_TYPE = errors.New("Invalid value type")
 
 	//具体属性错误
@@ -37,6 +35,5 @@ var (
 	ERR_PASSWD_NUL       = errors.New("Password is null")
 
 	//设置属性错误
-
 	ERR_SET_ATTR = errors.New("Set Attribute error")
 )

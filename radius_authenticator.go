@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/md5"
 	"encoding/binary"
+	"fmt"
 )
 
 //定义authenticator 16字节
@@ -39,15 +40,19 @@ func newAuthenticator() Authenticator {
 	return Authenticator(bs)
 }
 
-//setAuthenticator设置authenticator
-func (r *Radius) setAuthenticator(secret string) {
+//SetAuthenticator设置radius的authenticator
+func (r *Radius) SetAuthenticator(secret string) {
 	//
-	if r.Code == CodeAccountingRequest || r.IsRespons() || IsCOARespons() {
+	if r.Code == CodeAccessRequest {
+		return
+	}
+
+	if r.Code == CodeAccountingRequest || r.IsRespons() || r.IsCOARespons() {
 		buf := bytes.NewBuffer([]byte{})
 		if r.Code == CodeAccountingRequest {
 			r.Authenticator = Authenticator([16]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
 		}
-		r.WriteToBuff(buf)
+		r.Write(buf)
 		buf.Write([]byte(secret))
 		m := md5.Sum(buf.Bytes())
 		r.Authenticator = Authenticator(m)
@@ -59,13 +64,31 @@ func (r *Radius) setAuthenticator(secret string) {
 //IsAuthenticatorValid鉴别authenticator是否有效
 //对于计费响应报文按照协议进行计算验证
 //对于其它报文全部返回true
-func (r *Radius) IsAuthenticatorValid(secret string) bool {
+func (r *Radius) IsRequestValid(secret string) bool {
 	//
 	if r.Code == CodeAccountingRequest {
 		buf := bytes.NewBuffer([]byte{})
 		authtcr := r.Authenticator
-		r.Authenticator = radius.Authenticator([16]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
-		r.WriteToBuff(buf)
+		r.Authenticator = Authenticator([16]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
+		r.Write(buf)
+		buf.Write([]byte(secret))
+		m := md5.Sum(buf.Bytes())
+		if Authenticator(m) != authtcr {
+			return false
+		}
+	}
+	return true
+}
+
+//验证
+//对于其它报文全部返回true
+func (r *Radius) IsResponseValid(src_authtcr Authenticator, secret string) bool {
+	//
+	if r.IsRespons() {
+		buf := bytes.NewBuffer([]byte{})
+		authtcr := r.Authenticator
+		r.Authenticator = src_authtcr
+		r.Write(buf)
 		buf.Write([]byte(secret))
 		m := md5.Sum(buf.Bytes())
 		if Authenticator(m) != authtcr {

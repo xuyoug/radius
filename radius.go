@@ -1,5 +1,5 @@
 package radius
 
 func Version() string {
-	return "1.0"
+	return "0.9"
 }

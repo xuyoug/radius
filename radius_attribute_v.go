@@ -14,7 +14,7 @@ type AttIdV struct {
 }
 
 //ATTIDV_ERR定义错误的厂商属性
-var ATTIDV_ERR AttIdV = AttIdV{VENDOR_NO, 0}
+var ATTIDV_ERR AttIdV = AttIdV{VENDOR_ERR, 0}
 
 //String方法返回AttIdV的字符串表达形式
 func (a AttIdV) String() string {
@@ -105,14 +105,13 @@ func getattidv(s string) AttIdV {
 func GetAttIdV(s string) AttIdV {
 	s = stringfix(s)
 	var vid VendorId
-	var err error
 	ss := strings.Split(s, ":")
 	if len(ss) == 1 {
 		return getattidv(ss[0])
 	}
 	if len(ss) == 2 {
-		vid, err = GetVendorId(ss[0])
-		if err != nil {
+		vid = GetVendorId(ss[0])
+		if vid != VENDOR_ERR {
 			return ATTIDV_ERR
 		}
 		v, ok := list_attV_name[vid][ss[1]]

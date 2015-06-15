@@ -21,17 +21,18 @@ func bytesxor(i1, i2 []byte) []byte {
 
 //Decipher_pap_passwd解密pap密码
 //可对外导出
-func Decipher_pap_passwd(psw_bytes []byte, secret string, authenticator []byte) string {
+func Decipher_pap_passwd(psw_bytes []byte, secret string, authenticator_in Authenticator) string {
 	if len(psw_bytes)%16 != 0 || len(secret) == 0 {
 		return ""
 	}
 	l := len(psw_bytes) / 16
 	psw_out := make([]byte, 0)
+	authenticator := [16]byte(authenticator_in)
 	var encry_tmp []byte
 	for i := 0; i < l; i++ {
 		encry := []byte(secret)
 		if i == 0 {
-			encry = append(encry, authenticator...)
+			encry = append(encry, authenticator[:]...)
 		} else {
 			encry = append(encry, encry_tmp...)
 		}
@@ -45,10 +46,12 @@ func Decipher_pap_passwd(psw_bytes []byte, secret string, authenticator []byte) 
 
 //Encry_pap_passwd加密pap密码
 //可对外导出
-func Encry_pap_passwd(psw string, secret string, authenticator []byte) []byte {
-	if len(authenticator) != 16 || len(secret) == 0 {
+func Encry_pap_passwd(psw string, secret string, authenticator_in Authenticator) []byte {
+	authenticator := [16]byte(authenticator_in)
+	if len(secret) == 0 {
 		return []byte{}
 	}
+
 	psw_bytes := append([]byte(psw), make([]byte, 16-len(psw)%16)...)
 	psw_encried := make([]byte, 0)
 	var encry_tmp []byte
@@ -56,7 +59,7 @@ func Encry_pap_passwd(psw string, secret string, authenticator []byte) []byte {
 	for i := 0; i < l; i++ {
 		encry := []byte(secret)
 		if i == 0 {
-			encry = append(encry, authenticator...)
+			encry = append(encry, authenticator[:]...)
 		} else {
 			encry = append(encry, encry_tmp...)
 		}
@@ -67,4 +70,70 @@ func Encry_pap_passwd(psw string, secret string, authenticator []byte) []byte {
 		psw_encried = append(psw_encried, encry_tmp...)
 	}
 	return psw_encried
+}
+
+//
+func (r *Radius) CheckPasswd(pwd, secret string) bool {
+	if r.Code != CodeAccessRequest {
+		return true
+	}
+
+	pswd_p := r.GetAttrValue1(ATTID_USER_PASSWORD)
+	pswd_c := r.GetAttrValue1(ATTID_CHAP_PASSWORD)
+	if pswd_p == nil && pswd_c != nil {
+		var clg string
+		if c := r.GetAttrValue1(ATTID_CHAP_CHALLENGE); c != nil {
+			clg = c.Value().(string)
+		} else {
+			clg = string([]byte(r.Authenticator[:]))
+		}
+		if len(pswd_c.Value().(string)) != 17 {
+			return false
+		}
+		chapid := pswd_c.Value().(string)[0:1]
+		chapc := pswd_c.Value().(string)[1:17]
+
+		m := md5.New()
+		m.Write([]byte(chapid))
+		m.Write([]byte(pwd))
+		m.Write([]byte(clg))
+		m_out := m.Sum(nil)
+		for i := 0; i < 16; i++ {
+			if m_out[i] != chapc[i] {
+				return false
+			}
+		}
+		return true
+	}
+	if pswd_c == nil && pswd_p != nil {
+		return Decipher_pap_passwd([]byte(pswd_p.Value().(string)), secret, r.Authenticator) == pwd
+	}
+	return false
+}
+
+//
+func (r *Radius) AddPwd(pwd, secret string, ispap bool) error {
+	if r.Code != CodeAccessRequest {
+		return ERR_SET_ATTR
+	}
+	if ispap {
+		r.AddAttr(&Attribute{ATTID_USER_PASSWORD, STRING(Encry_pap_passwd(pwd, secret, r.Authenticator))})
+	} else {
+		clg := []byte(r.Authenticator[:])
+		chapid := byte(RandInt(255))
+
+		m := md5.New()
+		m.Write([]byte{chapid})
+		m.Write([]byte(pwd))
+		m.Write(clg)
+		m_out := m.Sum(nil)
+
+		passwd := make([]byte, 17)
+		passwd[0] = chapid
+		for i := 1; i < 17; i++ {
+			passwd[i] = m_out[i-1]
+		}
+		r.AddAttr(&Attribute{ATTID_CHAP_PASSWORD, STRING(passwd)})
+	}
+	return nil
 }

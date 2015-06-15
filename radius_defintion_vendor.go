@@ -81,7 +81,7 @@ var list_vendor_type4 []VendorId = []VendorId{VENDOR_3COM}
 //vendortype不为TYPE4的均设置为IETF
 func Customer_SetVendorList(vendorid int, name string, typ string) error {
 	id := VendorId(vendorid)
-	if id == VENDOR_NO {
+	if id == VENDOR_ERR {
 		return ERR_VENDOR_SET //不允许设置vendorid为0的
 	}
 	if _, ok := list_vendor_id[id]; ok { //若存在，则不允许重载

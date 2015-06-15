@@ -67,7 +67,7 @@ func (c Code) String() string {
 //返回Code的int表示
 func (c Code) Int() int {
 	if c.IsSupported() {
-		int(c)
+		return int(c)
 	}
 	return 0
 }
@@ -85,8 +85,8 @@ func (c *Code) read(buf *bytes.Buffer) error {
 }
 
 //将Code写入buffer
-func (r Code) write(buf *bytes.Buffer) {
-	err := buf.WriteByte(byte(c))
+func (c Code) write(buf *bytes.Buffer) {
+	buf.WriteByte(byte(c))
 }
 
 //Judge判断响应报文的Code

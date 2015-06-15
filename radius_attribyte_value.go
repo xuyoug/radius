@@ -3,7 +3,6 @@ package radius
 import (
 	"bytes"
 	"encoding/binary"
-	"errors"
 	"fmt"
 	"net"
 	"strconv"
@@ -18,6 +17,7 @@ type TAG_STR string
 type HEXADECIMAL []byte
 
 //Uint32返回IPADDR类型的uint32形式
+//用于索引含义
 func (i IPADDR) Uint32() uint32 {
 	return uint32(i[0])<<24 + uint32(i[1])<<16 + uint32(i[2])<<8 + uint32(i[3])
 }
@@ -83,52 +83,52 @@ func (v HEXADECIMAL) Value() interface{} {
 }
 
 //ValueTypestring获取属性值的类型字符串
-func (v INTEGER) ValueTypestring() string {
+func (v INTEGER) Type() string {
 	return "INTEGER"
 }
-func (v STRING) ValueTypestring() string {
+func (v STRING) Type() string {
 	return "STRING"
 }
-func (v IPADDR) ValueTypestring() string {
+func (v IPADDR) Type() string {
 	return "IPADDR"
 }
-func (v TAG_INT) ValueTypestring() string {
+func (v TAG_INT) Type() string {
 	return "TAG_INT"
 }
-func (v TAG_STR) ValueTypestring() string {
+func (v TAG_STR) Type() string {
 	return "TAG_STR"
 }
-func (v HEXADECIMAL) ValueTypestring() string {
+func (v HEXADECIMAL) Type() string {
 	return "HEXADECIMAL"
 }
 
 //writeBuff写值入buffer
-func (v INTEGER) writeBuffer(buf *bytes.Buffer) {
+func (v INTEGER) write(buf *bytes.Buffer) {
 	binary.Write(buf, binary.BigEndian, v)
 }
-func (v STRING) writeBuffer(buf *bytes.Buffer) {
+func (v STRING) write(buf *bytes.Buffer) {
 	buf.Write([]byte(v))
 }
-func (v IPADDR) writeBuffer(buf *bytes.Buffer) {
+func (v IPADDR) write(buf *bytes.Buffer) {
 	buf.Write([]byte(net.IP(v).To4()))
 }
-func (v TAG_INT) writeBuffer(buf *bytes.Buffer) {
+func (v TAG_INT) write(buf *bytes.Buffer) {
 	binary.Write(buf, binary.BigEndian, v)
 }
-func (v TAG_STR) writeBuffer(buf *bytes.Buffer) {
+func (v TAG_STR) write(buf *bytes.Buffer) {
 	buf.Write([]byte(v))
 }
-func (v HEXADECIMAL) writeBuffer(buf *bytes.Buffer) {
+func (v HEXADECIMAL) write(buf *bytes.Buffer) {
 	buf.Write([]byte(v))
 }
 
 //AttributeValue定时属性值类型接口
 type AttributeValue interface {
-	writeBuffer(buf *bytes.Buffer)
+	write(buf *bytes.Buffer)
 	String() string
 	Value() interface{}
 	ValueLen() int
-	ValueTypestring() string
+	Type() string
 }
 
 //newAttributeValue获取空属性值
@@ -170,7 +170,7 @@ func readAttributeValue(attrType string, length int, buf_in *bytes.Buffer) (Attr
 	switch attrType {
 	case "INTEGER":
 		if length != 4 {
-			return nil, errors.New("INTEGER type must length 4")
+			return nil, ERR_VALUE_TYPE
 		}
 		binary.Read(buf, binary.BigEndian, &tmp)
 		v = INTEGER(tmp)
@@ -178,12 +178,12 @@ func readAttributeValue(attrType string, length int, buf_in *bytes.Buffer) (Attr
 		v = STRING(bs)
 	case "IPADDR":
 		if length != 4 {
-			return nil, errors.New("IPADDR type must length 4")
+			return nil, ERR_VALUE_TYPE
 		}
 		v = IPADDR(bs)
 	case "TAG_INT":
 		if length != 4 {
-			return nil, errors.New("TAG_INT type must length 4")
+			return nil, ERR_VALUE_TYPE
 		}
 		binary.Read(buf, binary.BigEndian, &tmp)
 		v = TAG_INT(tmp)
@@ -226,7 +226,7 @@ func NewAttributeValue(attrType string, i interface{}) (AttributeValue, error) {
 				return v, nil
 			}
 		}
-		return nil, errors.New("INTEGER type must fill by int or uint32 type")
+		return nil, ERR_VALUE_TYPE
 	case "STRING":
 		tmp, ok := i.(string)
 		if ok {
@@ -238,7 +238,7 @@ func NewAttributeValue(attrType string, i interface{}) (AttributeValue, error) {
 			v = STRING(tmp1)
 			return v, nil
 		}
-		return nil, errors.New("STRING type must fill by string or []byte type")
+		return nil, ERR_VALUE_TYPE
 	case "IPADDR":
 		tmp, ok := i.(string)
 		if ok {
@@ -255,7 +255,7 @@ func NewAttributeValue(attrType string, i interface{}) (AttributeValue, error) {
 			v = IPADDR(tmp1)
 			return v, nil
 		}
-		return nil, errors.New("IPADDR type must fill by string or length 4 []byte type")
+		return nil, ERR_VALUE_TYPE
 	case "TAG_INT":
 		tmp, ok := i.(int)
 		if ok {
@@ -275,7 +275,7 @@ func NewAttributeValue(attrType string, i interface{}) (AttributeValue, error) {
 				return v, nil
 			}
 		}
-		return nil, errors.New("TAG_INT type must fill by int or uint32 type")
+		return nil, ERR_VALUE_TYPE
 	case "TAG_STR":
 		tmp, ok := i.(string)
 		if ok {
@@ -287,7 +287,7 @@ func NewAttributeValue(attrType string, i interface{}) (AttributeValue, error) {
 			v = TAG_STR(tmp1)
 			return v, nil
 		}
-		return nil, errors.New("TAG_STR type must fill by string or []byte type")
+		return nil, ERR_VALUE_TYPE
 	case "HEXADECIMAL":
 		tmp, ok := i.(string)
 		if ok {
@@ -299,7 +299,7 @@ func NewAttributeValue(attrType string, i interface{}) (AttributeValue, error) {
 			v = HEXADECIMAL(tmp1)
 			return v, nil
 		}
-		return nil, errors.New("HEXADECIMAL type must fill by string or []byte type")
+		return nil, ERR_VALUE_TYPE
 	default:
 		return nil, ERR_ATT_VTYPE
 	}
@@ -310,7 +310,7 @@ func NewAttributeValue(attrType string, i interface{}) (AttributeValue, error) {
 //该方法主要由外部使用
 func NewAttributeValueS(attrType, s string) (AttributeValue, error) {
 	attrType = stringfix(attrType)
-	v, err := newAttributeValueEmpt(attrType)
+	v, err := newAttributeValue(attrType)
 	if err != nil {
 		return INTEGER(0), err
 	}
@@ -332,6 +332,8 @@ func NewAttributeValueS(attrType, s string) (AttributeValue, error) {
 		} else {
 			if len(s) == 4 {
 				v = IPADDR(s)
+			} else {
+				return nil, ERR_ATT_VTYPE
 			}
 		}
 		return v, nil

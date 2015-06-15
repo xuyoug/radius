@@ -27,5 +27,5 @@ func (id *Id) read(buf *bytes.Buffer) error {
 
 //将Id写入buffer
 func (id Id) write(buf *bytes.Buffer) {
-	err := buf.WriteByte(byte(id))
+	buf.WriteByte(byte(id))
 }

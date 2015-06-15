@@ -11,6 +11,7 @@ var (
 	Err_FmtError     = errors.New("Fmt Radius Error")
 	Err_ReplyTimeout = errors.New("Reply Timeout")
 	Err_Drop_SrcChan = errors.New("Drop Inside SrcChan Because Timeout")
+	Err_CanotReply   = errors.New("Can not reply this radius")
 )
 
 type NodeErr struct {

@@ -1,6 +1,7 @@
 package radius
 
 import (
+	"bytes"
 	"encoding/binary"
 	"strconv"
 )
@@ -21,7 +22,7 @@ func (l Length) String() string {
 
 //判断是否是有效的radius长度
 func (r Length) IsValidLenth() bool {
-	if r >= R_Length_MIN && r <= R_Length_MAX {
+	if r >= Length_MIN && r <= Length_MAX {
 		return true
 	}
 	return false
@@ -36,7 +37,7 @@ func (r *Length) read(buf *bytes.Buffer) error {
 	if err1 != nil || err2 != nil {
 		return ERR_RADIUS_FMT
 	}
-	l := R_Length(b1<<8) + R_Length(b2)
+	l := Length(b1<<8) + Length(b2)
 	if l.IsValidLenth() && buf.Len()+4 >= int(l) { //不允许buf长度小于radius长度，但是大于可以
 		*r = l
 		return nil
@@ -47,4 +48,23 @@ func (r *Length) read(buf *bytes.Buffer) error {
 //将Length写入buffer
 func (r Length) write(buf *bytes.Buffer) {
 	binary.Write(buf, binary.BigEndian, r)
+}
+
+//GetLength设置radius结构字节化后的长度
+func (r *Radius) SetLength() {
+	var l Length
+	l = 20
+	for _, v := range r.AttributeList.attributes {
+		switch v.AttributeId.(type) {
+		case AttId:
+			l += Length(v.AttributeValue.ValueLen() + 2)
+		case AttIdV:
+			if v.AttributeId.(AttIdV).IsType4() {
+				l += Length(v.AttributeValue.ValueLen() + 10)
+			} else {
+				l += Length(v.AttributeValue.ValueLen() + 8)
+			}
+		}
+	}
+	r.Length = l
 }

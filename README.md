@@ -3,6 +3,7 @@ RFC 2865 协议（radius协议）的部分实现
 
 Author:xuyoug
 xuyoug@yeah.net
+Version:0.9
 
 ### 说明
 本项目__还在开发过程中，还没有达到生产可用的水平__,

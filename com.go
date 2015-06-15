@@ -5,6 +5,7 @@ import (
 	"io"
 	"math/rand"
 	"strings"
+	"time"
 )
 
 //stringfix预处理字符串

@@ -6,20 +6,19 @@ import (
 
 //定义属性标示符接口
 type AttributeId interface {
-	write(buf *bytes.Buffer) error
+	write(buf *bytes.Buffer)
 	String() string
 	ValueType() string
 	IsValid() bool
 	AttributeName() string
 }
 
-//newAttributeId is a fucking and terrible thing!Fuck it!
+//NewAttributeId is a fucking and terrible thing!Fuck it!
 //这种方式获取 时间在0.003ms-0.01ms之间
-func newAttributeId(in ...interface{}) (AttributeId, error) {
+func NewAttributeId(in ...interface{}) (AttributeId, error) {
 	var vid VendorId
 	var aid AttId
 	var aidv AttIdV
-	var err error
 
 	switch len(in) {
 	case 1:
@@ -77,9 +76,9 @@ func newAttributeId(in ...interface{}) (AttributeId, error) {
 				return nil, ERR_ATT_SET
 			}
 		case string:
-			vid, err = GetVendorId(in[0].(string))
-			if err != nil {
-				return nil, err
+			vid = GetVendorId(in[0].(string))
+			if vid != VENDOR_ERR {
+				return nil, ERR_ATT_SET
 			}
 			switch in[1].(type) {
 			case int:
@@ -135,7 +134,7 @@ func (a *Attribute) String() string {
 }
 
 //ATTIDV_ERR定义错误的厂商属性
-var ATTRIBUTE_ERR Attribute = Attribute{ATT_NO, INTEGER(0)}
+var ATTRIBUTE_ERR Attribute = Attribute{ATTID_ERR, INTEGER(0)}
 
 //readAttribute从buf读取Attribute
 func readAttribute(buf *bytes.Buffer) (Attribute, error) {
@@ -164,7 +163,7 @@ func readAttribute(buf *bytes.Buffer) (Attribute, error) {
 		if err1 != nil {
 			return ATTRIBUTE_ERR, err1
 		}
-		typ = attidv.ValueTypestring()
+		typ = attidv.ValueType()
 		if !attidv.IsType4() {
 			b, err = buf.ReadByte()
 			lengthv = int(b)
@@ -191,19 +190,46 @@ func readAttribute(buf *bytes.Buffer) (Attribute, error) {
 func (v *Attribute) write(buf *bytes.Buffer) {
 	switch v.AttributeId.(type) {
 	case AttId:
-		v.AttributeId.writeAttributeId(buf)
+		v.AttributeId.write(buf)
 		buf.WriteByte(byte(uint8(v.ValueLen() + 2)))
-		v.AttributeValue.writeBuffer(buf)
+		v.AttributeValue.write(buf)
 	case AttIdV:
 		buf.WriteByte(byte(ATTID_VENDOR_SPECIFIC))
 		if !v.AttributeId.(AttIdV).IsType4() {
 			buf.WriteByte(byte(uint8(v.ValueLen() + 8)))
-			v.AttributeId.writeAttributeId(buf)
+			v.AttributeId.write(buf)
 			buf.WriteByte(byte(uint8(v.ValueLen() + 2)))
 		} else {
 			buf.WriteByte(byte(uint8(v.ValueLen() + 10)))
-			v.AttributeId.writeAttributeId(buf)
+			v.AttributeId.write(buf)
 		}
-		v.AttributeValue.writeBuffer(buf)
+		v.AttributeValue.write(buf)
 	}
+}
+
+//NewAttribute根据输入创建Attribute，包括属性id和属性值
+func NewAttribute(in ...interface{}) (*Attribute, error) {
+	switch len(in) {
+	case 2:
+		id, err := NewAttributeId(in[0])
+		if err != nil {
+			return nil, ERR_ATT_FMT
+		}
+		v, err1 := NewAttributeValue(id.ValueType(), in[1])
+		if err1 != nil {
+			return nil, ERR_ATT_FMT
+		}
+		return &Attribute{id, v}, nil
+	case 3:
+		id, err := NewAttributeId(in[0], in[1])
+		if err != nil {
+			return nil, ERR_ATT_FMT
+		}
+		v, err1 := NewAttributeValue(id.ValueType(), in[2])
+		if err1 != nil {
+			return nil, ERR_ATT_FMT
+		}
+		return &Attribute{id, v}, nil
+	}
+	return nil, ERR_ATT_FMT
 }
