@@ -50,5 +50,5 @@ func RandInt(i int) int {
 
 //计算随机数
 func RandBit() byte {
-	return byte(r_rand.Intn(256))
+	return byte(uint8(r_rand.Intn(256)))
 }

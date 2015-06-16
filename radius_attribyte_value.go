@@ -160,10 +160,13 @@ func newAttributeValue(attrType string) (AttributeValue, error) {
 
 //readAttributeValueFromBuff从buff获取属性值
 func readAttributeValue(attrType string, length int, buf_in *bytes.Buffer) (AttributeValue, error) {
+	//fmt.Println(attrType)
 	v, err := newAttributeValue(attrType)
 	if err != nil {
+		panic("here readAttributeValue and used a wrong attrType")
 		return nil, err
 	}
+
 	bs := buf_in.Next(length)
 	buf := bytes.NewBuffer(bs)
 	var tmp uint32
@@ -175,7 +178,11 @@ func readAttributeValue(attrType string, length int, buf_in *bytes.Buffer) (Attr
 		binary.Read(buf, binary.BigEndian, &tmp)
 		v = INTEGER(tmp)
 	case "STRING":
-		v = STRING(bs)
+		if length == 0 {
+			v = STRING("[MISSING]")
+		} else {
+			v = STRING(bs)
+		}
 	case "IPADDR":
 		if length != 4 {
 			return nil, ERR_VALUE_TYPE
@@ -188,7 +195,11 @@ func readAttributeValue(attrType string, length int, buf_in *bytes.Buffer) (Attr
 		binary.Read(buf, binary.BigEndian, &tmp)
 		v = TAG_INT(tmp)
 	case "TAG_STR":
-		v = TAG_STR(bs)
+		if length == 0 {
+			v = TAG_STR("[MISSING]")
+		} else {
+			v = TAG_STR(bs)
+		}
 	case "HEXADECIMAL":
 		v = HEXADECIMAL(bs)
 	default:

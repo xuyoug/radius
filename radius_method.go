@@ -2,6 +2,7 @@ package radius
 
 import (
 	"bytes"
+	//"fmt"
 	"net"
 )
 
@@ -10,10 +11,12 @@ import (
 //
 func ReadFromBuffer(buf *bytes.Buffer) (*Radius, error) {
 	r := NewRadius()
+	//fmt.Println(r, "test1")
 	err := r.Read(buf)
 	if err != nil {
-		return nil, err
+		return r, err
 	}
+	//fmt.Println(r, "test")
 	return r, nil
 }
 
@@ -38,12 +41,17 @@ func (r *Radius) Read(buf *bytes.Buffer) error {
 	if err != nil {
 		return err
 	}
+
+	buf = bytes.NewBuffer(buf.Next(int(r.Length) - 20))
+
 	for {
 		v, err := readAttribute(buf)
+		//fmt.Println(v, "v")
 		if isEOF(err) {
-			break
+			return nil
 		}
 		if err != nil {
+			//panic(err)
 			return err
 		}
 		r.AttributeList.AddAttr(&v)

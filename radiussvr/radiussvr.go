@@ -6,7 +6,6 @@ import (
 	"github.com/xuyoug/radius"
 	"net"
 	"strconv"
-	"sync"
 	"time"
 )
 
@@ -41,7 +40,7 @@ func (sr *SrcRadius) Reply(judge bool) (*ReplyRadius, error) {
 	rr.Radius = sr.Radius.Ack(judge)
 	//
 	if rr.Radius == nil {
-		rr.lisenter.Add_wrong(rr.DstAddr.IP, Err_CanotReply)
+		rr.lisenter.Add_wrong()
 		return nil, Err_CanotReply
 	}
 	//
@@ -55,26 +54,18 @@ func (dr *ReplyRadius) Send() {
 
 //定义radiuslistener的结构
 type RadiusListener struct {
-	conn          *net.UDPConn
-	udpAddr       *net.UDPAddr
-	secretlist    *SecretList
-	cnt_received  int
-	cnt_replyed   int
-	cnt_wrong     int
-	nodesreceived map[string]int
-	nodesreplyed  map[string]int
-	nodeswrong    map[string]map[error]int
-	fmtgoroutine  int //标识当前有多少个协程在解radius报文
-	C_recive      chan *SrcRadius
-	c_or          chan *original_radius
-	c_send        chan *ReplyRadius
-	C_err         chan error
-	startTime     time.Time
-	timeout       time.Duration
-	lsr_sync_r    sync.RWMutex
-	lsr_sync_s    sync.RWMutex
-	lsr_sync_w    sync.RWMutex
-	lsr_sync_f    sync.RWMutex
+	conn         *net.UDPConn
+	udpAddr      *net.UDPAddr
+	secretlist   *SecretList
+	cnt_received int64
+	cnt_replyed  int64
+	cnt_wrong    int64
+	C_recive     chan *SrcRadius
+	c_or         chan *original_radius
+	c_send       chan *ReplyRadius
+	C_err        chan error
+	startTime    time.Time
+	timeout      time.Duration
 }
 
 //定义从网卡获取的原始为格式化的radius信息
@@ -89,9 +80,6 @@ func (c *RadiusListener) run(cache int) error {
 	c.c_or = make(chan *original_radius, cache)
 	c.c_send = make(chan *ReplyRadius, cache)
 	c.C_err = make(chan error, cache)
-	c.nodesreceived = make(map[string]int)
-	c.nodesreplyed = make(map[string]int)
-	c.nodeswrong = make(map[string]map[error]int)
 	c.startTime = time.Now()
 	con, err := net.ListenUDP("udp", c.udpAddr)
 	if err != nil {
@@ -113,14 +101,15 @@ func (c *RadiusListener) getSrcOriginalbytes() {
 		var udpAddr *net.UDPAddr
 		var err error
 		b_num, udpAddr, err = c.conn.ReadFromUDP(bs[0:])
-		c.add_received(udpAddr.IP)
+		c.add_received()
 		if err != nil {
-			c.Add_wrong(udpAddr.IP, err)
+			c.Add_wrong()
 			return
 		}
 		if b_num > 4096 || b_num < 20 { //对于长度非法的自己忽略
 			err = radius.ERR_LEN_INVALID
-			c.Add_wrong(udpAddr.IP, err)
+			//fmt.Println("length error")
+			c.Add_wrong()
 			return
 		}
 		or := new(original_radius)
@@ -147,7 +136,7 @@ func (c *RadiusListener) decoderadius(or *original_radius) {
 	var secret string
 	var err error
 	//添加一个格式化计数
-	c.addfmtgoroutine()
+	//c.addfmtgoroutine()
 	src_r := new(SrcRadius)
 
 	ip = or.udpAddr.IP                           //获取IP
@@ -161,24 +150,25 @@ func (c *RadiusListener) decoderadius(or *original_radius) {
 	src_r.Radius, err = radius.ReadFromBuffer(or.buf)
 
 	if err != nil {
-		c.Add_wrong(ip, err)
-		c.endfmtgoroutine()
+		c.Add_wrong()
+		c.C_err <- err
+		//c.endfmtgoroutine()
 		return
 	}
 	//如果是计费请求报文，验证authenticator
 	if !src_r.CheckAuthenticator() {
-		c.Add_wrong(ip, Err_SecretWrong)
-		c.endfmtgoroutine()
+		c.Add_wrong()
+		//c.endfmtgoroutine()
 		return
 	}
 	//
 	select {
 	case c.C_recive <- src_r:
-		c.endfmtgoroutine()
+		//c.endfmtgoroutine()
 		return
 	case <-time.After(time.Second):
-		c.endfmtgoroutine()
-		c.Add_wrong(ip, Err_Drop_SrcChan)
+		//c.endfmtgoroutine()
+		c.Add_wrong()
 	}
 }
 
@@ -193,9 +183,9 @@ func (c *RadiusListener) replyRadius() {
 			rr.Radius.SetLength()
 			_, err = c.conn.WriteToUDP(rr.Radius.Bytes(), rr.DstAddr)
 			if err != nil {
-				rr.lisenter.Add_wrong(rr.DstAddr.IP, err)
+				rr.lisenter.Add_wrong()
 			}
-			c.add_replyed(rr.DstAddr.IP)
+			c.add_replyed()
 		}
 	}
 }

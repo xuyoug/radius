@@ -149,12 +149,13 @@ func readAttribute(buf *bytes.Buffer) (Attribute, error) {
 	}
 	b, err = buf.ReadByte()
 	if err != nil {
-		return ATTRIBUTE_ERR, ERR_ATT_FMT
+		return ATTRIBUTE_ERR, err
 	}
 	length = int(b)
 	if attid != ATTID_VENDOR_SPECIFIC {
 		v, err1 := readAttributeValue(attid.ValueType(), length-2, buf)
 		if err1 != nil {
+			//panic("here")
 			return ATTRIBUTE_ERR, err1
 		}
 		return Attribute{attid, v}, nil
@@ -165,7 +166,7 @@ func readAttribute(buf *bytes.Buffer) (Attribute, error) {
 		}
 		typ = attidv.ValueType()
 		if !attidv.IsType4() {
-			b, err = buf.ReadByte()
+			b, _ = buf.ReadByte()
 			lengthv = int(b)
 			if lengthv != length-6 {
 				return ATTRIBUTE_ERR, ERR_ATT_FMT

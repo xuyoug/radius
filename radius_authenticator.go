@@ -61,7 +61,7 @@ func (r *Radius) SetAuthenticator(secret string) {
 	}
 }
 
-//IsAuthenticatorValid鉴别authenticator是否有效
+//IsRequestValid鉴别authenticator是否有效
 //对于计费响应报文按照协议进行计算验证
 //对于其它报文全部返回true
 func (r *Radius) IsRequestValid(secret string) bool {
@@ -94,6 +94,7 @@ func (r *Radius) IsResponseValid(src_authtcr Authenticator, secret string) bool 
 		if Authenticator(m) != authtcr {
 			return false
 		}
+		r.Authenticator = authtcr
 	}
 	return true
 }
