@@ -21,7 +21,6 @@ func (r *Radius) String() string {
 //初始化一个radius
 func NewRadius() *Radius {
 	r := new(Radius)
-
 	r.AttributeList.attributes = make([]Attribute, 0)
 	return r
 }
@@ -29,7 +28,7 @@ func NewRadius() *Radius {
 //初始化一个radius
 func NewRadiusI(in interface{}) *Radius {
 	r := NewRadius()
-	r.Authenticator = newAuthenticator()
+
 	switch in.(type) {
 	case Code:
 		r.Code = in.(Code)
@@ -37,6 +36,9 @@ func NewRadiusI(in interface{}) *Radius {
 		r.Code = Code(in.(int))
 	default:
 		return nil
+	}
+	if r.Code == CodeAccessRequest {
+		r.Authenticator = newAuthenticator()
 	}
 	return r
 }

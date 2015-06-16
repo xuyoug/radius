@@ -2466,3 +2466,8 @@ func Customer_SetVendorAttList(vendorname string, vaid_in int, vaname string, va
 func ListattV() map[VendorId]map[int]Description_definition {
 	return list_attV_id
 }
+
+//ListattV返回所有厂商属性列表
+func Listatt() map[AttId]Description_definition {
+	return list_attributestand_id
+}

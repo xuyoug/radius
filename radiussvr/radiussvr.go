@@ -49,7 +49,10 @@ func (sr *SrcRadius) Reply(judge bool) (*ReplyRadius, error) {
 
 //Send发送响应报文
 func (dr *ReplyRadius) Send() {
-	dr.lisenter.c_send <- dr
+	dr.Radius.SetAuthenticator(dr.Secret)
+	dr.Radius.SetLength()
+	bs := dr.Radius.Bytes()
+	dr.lisenter.c_send <- &final_radius{dr.DstAddr, bs}
 }
 
 //定义radiuslistener的结构
@@ -62,7 +65,7 @@ type RadiusListener struct {
 	cnt_wrong    int64
 	C_recive     chan *SrcRadius
 	c_or         chan *original_radius
-	c_send       chan *ReplyRadius
+	c_send       chan *final_radius
 	C_err        chan error
 	startTime    time.Time
 	timeout      time.Duration
@@ -74,11 +77,17 @@ type original_radius struct {
 	buf     *bytes.Buffer
 }
 
+//定义从网卡获取的原始为格式化的radius信息
+type final_radius struct {
+	udpAddr *net.UDPAddr
+	bs      []byte
+}
+
 //run启动RadiusListener
 func (c *RadiusListener) run(cache int) error {
 	c.C_recive = make(chan *SrcRadius, cache)
 	c.c_or = make(chan *original_radius, cache)
-	c.c_send = make(chan *ReplyRadius, cache)
+	c.c_send = make(chan *final_radius, cache)
 	c.C_err = make(chan error, cache)
 	c.startTime = time.Now()
 	con, err := net.ListenUDP("udp", c.udpAddr)
@@ -179,11 +188,10 @@ func (c *RadiusListener) replyRadius() {
 	for {
 		select {
 		case rr := <-c.c_send:
-			rr.Radius.SetAuthenticator(rr.Secret)
-			rr.Radius.SetLength()
-			_, err = c.conn.WriteToUDP(rr.Radius.Bytes(), rr.DstAddr)
+
+			_, err = c.conn.WriteToUDP(rr.bs, rr.udpAddr)
 			if err != nil {
-				rr.lisenter.Add_wrong()
+				c.Add_wrong()
 			}
 			c.add_replyed()
 		}
