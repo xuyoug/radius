@@ -11,17 +11,20 @@ import (
 	"strings"
 )
 
+//def the err
 var (
 	ERR_FMT = errors.New("fmt package err")
 )
 
-//
+//def the attribute struct
+//it do not show for outside
 type attr struct {
 	sid uint8
 	v   uint32
 	vid uint8
 }
 
+//def the method to get attribute's name
 func (a *attr) Name() string {
 	if v, ok := map_f[*a]; ok {
 		return v.Name
@@ -29,6 +32,7 @@ func (a *attr) Name() string {
 	return ""
 }
 
+//def the attribute's value type
 func (a *attr) Type() string {
 	if v, ok := map_f[*a]; ok {
 		return v.Type
@@ -36,13 +40,15 @@ func (a *attr) Type() string {
 	return ""
 }
 
-//
+//def radiusf struct
 type Radiusf struct {
 	Code  uint8
 	attrs map[string]interface{}
 }
 
-//
+//format the radiusf type from buffer
+//return nill and err when get a terrible error
+//return formatable part and err when get other error
 func ReadRadiusf(buf *bytes.Buffer) (*Radiusf, error) {
 	var b [4]byte
 	var err error
@@ -140,7 +146,8 @@ func ReadRadiusf(buf *bytes.Buffer) (*Radiusf, error) {
 	return r, nil
 }
 
-//
+//get attribute by name and return the value as it's type
+//return nil when not found
 func (r *Radiusf) Get(attname string) interface{} {
 	attname = strings.ToUpper(attname)
 	if v, ok := r.attrs[attname]; ok {
@@ -149,7 +156,7 @@ func (r *Radiusf) Get(attname string) interface{} {
 	return nil
 }
 
-//
+//get attribute by name and format the value as a formatable string
 func (r *Radiusf) GetS(attname string) string {
 	attname = strings.ToUpper(attname)
 	if v, ok := r.attrs[attname]; ok {
